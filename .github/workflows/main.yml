@@ -1,5 +1,3 @@
-# AI enabled code reviews using devai
-# - Requires GCP service account stored in GOOGLE_API_CREDENTIALS secret
 name: GenAI For Developers
 run-name: Reviewing ${{ github.actor }}'s code changes  🚀
 on: [workflow_dispatch]
@@ -47,24 +45,3 @@ jobs:
         run: echo '## Test Coverage Review Results 🚀' >> $GITHUB_STEP_SUMMARY
       - run: echo "$(devai review testcoverage -c ${{ github.workspace }}/sample-app/src)" >> $GITHUB_STEP_SUMMARY
         shell: bash
-
-      - name: Code Review
-        run: echo '## Code Review Results 🚀' >> $GITHUB_STEP_SUMMARY
-      - run: echo "$(devai review code -c ${{ github.workspace }}/sample-app/src/main/java/anthos/samples/bankofanthos/balancereader)" >> $GITHUB_STEP_SUMMARY
-        shell: bash
-
-      - name: Performance Review
-        run: echo '## Performance Review Results 🚀' >> $GITHUB_STEP_SUMMARY
-      - run: echo "$(devai review performance -c ${{ github.workspace }}/sample-app/src/main/java/anthos/samples/bankofanthos/balancereader)" >> $GITHUB_STEP_SUMMARY
-        shell: bash
-
-      - name: Security Review
-        run: echo '## Security Review Results 🚀' >> $GITHUB_STEP_SUMMARY
-      - run: echo "$(devai review security -c ${{ github.workspace }}/sample-app/src/main/java/anthos/samples/bankofanthos/balancereader)" >> $GITHUB_STEP_SUMMARY
-        shell: bash
-
-      - name: Blockers Review
-        run: echo '## Blockers Review Results 🚀' >> $GITHUB_STEP_SUMMARY
-      - run: echo "$(devai review blockers -c ${{ github.workspace }}/sample-app/pom.xml)" >> $GITHUB_STEP_SUMMARY
-        shell: bash
-              
