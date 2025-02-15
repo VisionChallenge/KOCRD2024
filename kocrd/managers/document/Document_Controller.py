@@ -6,8 +6,8 @@ import json
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget, QVBoxLayout
 import pandas as pd
 from fpdf import FPDF
-from managers.document.document_Table_View import DocumentTableView
-from managers.document.document_manager import DocumentManager
+from kocrd.managers.document.document_table_view import DocumentTableView
+from kocrd.managers.document.document_manager import DocumentManager
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -59,19 +59,15 @@ class DocumentController(QWidget):
     def generate_report(self, output_path=None):
         """보고서를 생성합니다."""
         default_report_filename = self.system_manager.get_setting("DEFAULT_REPORT_FILENAME")
-        # DocumentTableView의 데이터를 가져와 보고서 생성
+        headers, data = self.document_manager.get_table_data(include_headers=True)  # 변경
         extracted_texts = []
-        headers = self.document_table_view.headers # document_table_view의 headers 사용
         extracted_texts.append("\t".join(headers))
-        for row in range(self.document_table_view.table_widget.rowCount()):
-            row_data = []
-            for col in range(self.document_table_view.table_widget.columnCount()):
-                item = self.document_table_view.table_widget.item(row, col)
-                row_data.append(item.text() if item else "")
-            extracted_texts.append("\t".join(row_data))
+        for row in data:  # 변경
+            extracted_texts.append("\t".join(row))
+
         if not output_path:
             output_path, _ = QFileDialog.getSaveFileName(
-                self.parent, "보고서 저장", DEFAULT_REPORT_FILENAME, "Text Files (*.txt);;All Files (*)"
+                self.parent, "보고서 저장", default_report_filename, "Text Files (*.txt);;All Files (*)"
             )
             if not output_path:
                 QMessageBox.warning(self.parent, "저장 취소", "보고서 저장이 취소되었습니다.")
@@ -87,44 +83,30 @@ class DocumentController(QWidget):
             logging.info(f"Report saved to {output_path}")
             QMessageBox.information(self.parent, "저장 완료", f"보고서가 저장되었습니다: {output_path}")
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
-            QMessageBox.critical(self.parent, "저장 오류", config["messages"]["error"]["520"].format(error=e))
+            self.document_manager.handle_document_exception(self.parent, "document", "520", e, "보고서 저장 중 오류 발생")
     def export_to_pdf(self, filename="output.pdf"):
-        # DocumentTableView의 데이터를 가져와 PDF 생성
-        data = []
-        for row in range(self.document_table_view.table_widget.rowCount()):
-            row_data = []
-            for col in range(self.document_table_view.table_widget.columnCount()):
-                item = self.document_table_view.table_widget.item(row, col)
-                row_data.append(item.text() if item else "")
-            data.append(row_data)
+        """PDF 파일로 저장합니다."""
+        data = self.document_manager.get_table_data()  # 변경
 
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
         for row in data:
             for item in row:
-                pdf.cell(40, 10, txt=str(item), border=1) # cell 크기 조정, border 추가
-            pdf.ln() # 줄 바꿈
+                pdf.cell(40, 10, txt=str(item), border=1)
+            pdf.ln()
         pdf.output(filename)
         logging.info(f"PDF saved to {filename}.")
     def save_to_excel(self, file_path=None):
         """Excel 파일로 저장합니다."""
         default_excel_filename = self.system_manager.get_setting("DEFAULT_EXCEL_FILENAME")
-        # DocumentTableView의 데이터를 가져와 Excel 저장
-        rows = []
-        for row in range(self.document_table_view.table_widget.rowCount()):
-            row_data = []
-            for col in range(self.document_table_view.table_widget.columnCount()):
-                item = self.document_table_view.table_widget.item(row, col)
-                row_data.append(item.text() if item else "")
-            rows.append(row_data)
+        headers, data = self.document_manager.get_table_data(include_headers=True)  # 변경
+        df = pd.DataFrame(data, columns=headers)  # 변경
 
-        df = pd.DataFrame(rows, columns=self.document_table_view.headers) # 헤더 정보는 DocumentTableView에서 가져옴
         try:
             if not file_path:
                 file_path, _ = QFileDialog.getSaveFileName(
-                    self.parent, "Excel 파일 저장", DEFAULT_EXCEL_FILENAME, "Excel Files (*.xlsx);;All Files (*)" # config 사용
+                    self.parent, "Excel 파일 저장", default_excel_filename, "Excel Files (*.xlsx);;All Files (*)"
                 )
                 if not file_path:
                     QMessageBox.warning(self.parent, "저장 취소", "Excel 파일 저장이 취소되었습니다.")
@@ -136,8 +118,7 @@ class DocumentController(QWidget):
             logging.info(f"Data saved to Excel: {file_path}")
             QMessageBox.information(self.parent, "저장 완료", f"Excel 파일로 문서 정보가 저장되었습니다: {file_path}")
         except (PermissionError, IOError, Exception) as e:
-            self.document_manager.handle_document_exception(self.parent, "document", "520", e, "파일 저장 중 오류 발생")
-            
+            self.document_manager.handle_document_exception(self.parent, "document", "520", e, "Excel 파일 저장 중 오류 발생")            
     def clear_table(self):
         self.document_table_view.clear_table()
     def filter_documents(self, criteria):
@@ -166,14 +147,10 @@ class DocumentController(QWidget):
                         continue
 
                     item = self.document_table_view.table_widget.item(row, col)
-                    if item:
-                        cell_text = item.text().lower()
-                        keyword_lower = keyword.lower()
-
-                        if (match_exact and cell_text == keyword_lower) or (not match_exact and keyword_lower in cell_text):
-                            match_found = True
-                            found_any = True
-                            break
+                    if item and self.is_match_found(keyword, item.text(), match_exact):
+                        match_found = True
+                        found_any = True
+                        break
 
                 if match_found:
                     self.document_table_view.table_widget.showRow(row)
@@ -186,14 +163,12 @@ class DocumentController(QWidget):
             logging.info(f"Document search completed for keyword: {keyword}")
         except Exception as e:
             self.document_manager.handle_document_exception(self.parent, "document", "520", e, "문서 검색 중 오류 발생")
-
     def start_consuming(self):
         """메시지 큐에서 메시지를 소비."""
         try:
             self.message_queue_manager.start_consuming()
         except Exception as e:
             logging.error(config["messages"]["error"]["520"].format(error=e))
-
     def send_message(self, message):
         """메시지를 큐에 전송."""
         try:

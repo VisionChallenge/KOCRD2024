@@ -22,6 +22,7 @@ from kocrd.managers.rabbitmq_manager import RabbitMQManager
 from kocrd.Settings.settings_manager import SettingsManager # SettingsManager import 유지
 from kocrd.utils.embedding_utils import EmbeddingUtils # EmbeddingUtils import 유지
 from kocrd.handlers.training_event_handler import TrainingEventHandler
+from kocrd.config.config import Config
 
 class SystemManager:
     def __init__(self, config_files: list, main_window=None):
@@ -34,6 +35,7 @@ class SystemManager:
         self.ai_model_manager = AIModelManager.get_instance()
         self.training_event_handler = TrainingEventHandler(self, self.model_manager, self.ai_data_manager, self.ai_model_manager)
         self._initialize_managers()
+        self.config = Config
 
     def _initialize_managers(self):
         managers_config = self.config_manager.get("managers")
@@ -112,14 +114,8 @@ class SystemManager:
         """AIModelManager 인스턴스 반환."""
         return self.managers.get("ai_model")
 
-    def get_message(self, message_type: str, message_code: str) -> str:
-        """메시지 설정에서 메시지를 가져옵니다."""
-        try:
-            messages = self.config_manager.get("messages")  # config에서 메시지 설정 로드
-            return messages[message_type][message_code]
-        except KeyError:
-            logging.error(f"Message not found: {message_type} - {message_code}")
-            return f"Message not found: {message_type} - {message_code}"  # 메시지 없을 경우 기본 메시지 반환
+    def get_config(self): # config 객체 반환 메서드 추가
+        return self.config
 
 # main_window 모듈을 나중에 임포트
 from kocrd.window.main_window import MainWindow

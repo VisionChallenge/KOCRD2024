@@ -1,4 +1,4 @@
-# Document_temp.py: 문서 임시 파일 관리를 위한 클래스입니다.
+# document_temp.py: 문서 임시 파일 관리를 위한 클래스입니다.
 import os
 import tempfile
 import logging
@@ -6,7 +6,7 @@ import shutil
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-from kocrd.config.development import settings
+from kocrd.config.config import config
 import json
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
@@ -23,41 +23,27 @@ class DocumentTempManager:
 
     def create_temp_file(self, content, suffix=".tmp"):
         """임시 파일을 생성하고 내용을 작성합니다."""
-        try:
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-            temp_file.write(content.encode('utf-8'))
-            temp_file.close()
-            self.temp_files.append(temp_file.name)
-            logging.info(f"Temporary file created: {temp_file.name}")
-            return temp_file.name
-        except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
-            return None
+        file_path = tempfile.NamedTemporaryFile(delete=False, suffix=suffix).name
+        if self.handle_file_operation("write", file_path, content):  # 변경
+            self.temp_files.append(file_path)
+            logging.info(f"Temporary file created: {file_path}")
+            return file_path
+        return None
 
     def read_temp_file(self, file_path):
         """임시 파일의 내용을 읽어 반환합니다."""
-        try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-            logging.info(f"Temporary file read: {file_path}")
-            return content
-        except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
-            return None
+        return self.handle_file_operation("read", file_path)  # 변경
 
     def delete_temp_file(self, file_path):
         """임시 파일을 삭제합니다."""
-        try:
-            os.remove(file_path)
+        if self.handle_file_operation("delete", file_path):  # 변경
             self.temp_files.remove(file_path)
             logging.info(f"Temporary file deleted: {file_path}")
-        except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
 
     def cleanup(self):
         """모든 임시 파일을 삭제합니다."""
         for file_path in self.temp_files:
-            self.delete_temp_file(file_path)
+            self.delete_temp_file(file_path)  # 변경
         self.temp_files = []
         logging.info("All temporary files cleaned up.")
 
@@ -66,22 +52,30 @@ class DocumentTempManager:
         try:
             for filename in os.listdir(self.temp_dir):
                 file_path = os.path.join(self.temp_dir, filename)
+                backup_path = os.path.join(self.backup_dir, filename) # 백업 경로 설정
                 if os.path.isfile(file_path):
-                    shutil.copy(file_path, self.backup_dir)
+                    if not self.handle_file_operation("copy", file_path, destination=backup_path): # 변경
+                        return False # 백업 실패 시 False 반환
             logging.info("Temporary files backed up.")
+            return True
         except Exception as e:
             logging.error(config["messages"]["error"]["507"].format(e=e))
+            return False
 
     def restore_temp_files(self):
         """백업된 임시파일을 복원합니다."""
         try:
             for filename in os.listdir(self.backup_dir):
                 file_path = os.path.join(self.backup_dir, filename)
+                restore_path = os.path.join(self.temp_dir, filename) # 복원 경로 설정
                 if os.path.isfile(file_path):
-                    shutil.copy(file_path, self.temp_dir)
+                    if not self.handle_file_operation("copy", file_path, destination=restore_path): # 변경
+                        return False # 복원 실패 시 False 반환
             logging.info("Temporary files restored.")
+            return True
         except Exception as e:
             logging.error(config["messages"]["error"]["507"].format(e=e))
+            return False
 
     def cleanup_all_temp_files(self, retention_time: int = 3600):
         """임시 디렉토리의 모든 파일 정리 (보관 기간 적용)."""
@@ -114,3 +108,31 @@ class DocumentTempManager:
                     logging.error(config["messages"]["error"]["507"].format(e=e))
         else:
             self.cleanup_all_temp_files()
+    def handle_file_operation(self, operation, file_path, content=None, destination=None):
+        """파일 작업을 공통적으로 처리하는 함수 (확장)"""
+        try:
+            if operation == "write":
+                with open(file_path, 'w', encoding='utf-8') as file:
+                    file.write(content)
+                return True
+            elif operation == "read":
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    return file.read()
+            elif operation == "delete":
+                os.remove(file_path)
+                return True
+            elif operation == "copy":  # 파일 복사 기능 추가
+                shutil.copy2(file_path, destination)  # 메타데이터 보존을 위해 copy2 사용
+                return True
+            elif operation == "move": # 파일 이동 기능 추가
+                shutil.move(file_path, destination)
+                return True
+            else:
+                logging.error(config["messages"]["error"]["507"].format(e=f"Unsupported operation: {operation}"))
+                return False
+        except FileNotFoundError:
+            logging.warning(config["messages"]["warning"]["401"].format(file_path=file_path))
+            return False
+        except Exception as e:
+            logging.error(config["messages"]["error"]["507"].format(e=e))
+            return False

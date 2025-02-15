@@ -1,4 +1,4 @@
-# file_name: Document_Manager
+# file_name: document_manager
 
 import os
 import pika
@@ -12,13 +12,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from pdf2image import convert_from_path
 from typing import List, Optional
 from PyQt5.QtWidgets import QMessageBox
-from kocrd.config.config import config, get_message
+from kocrd.config.config import config, get_message  # config import 추가
+from kocrd.managers.document.document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
+from system_manager import SystemManager
 
 config_path = os.path.join(os.path.dirname(__file__), 'Document_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
-VALID_FILE_EXTENSIONS = config["VALID_FILE_EXTENSIONS"]
 MAX_FILE_SIZE = config["MAX_FILE_SIZE"]
 MESSAGE_QUEUE = config["MESSAGE_QUEUE"]
 MESSAGE_TYPES = config["message_types"]
@@ -27,9 +28,9 @@ LOGGING_INFO = config["logging"]["info"]
 LOGGING_WARNING = config["logging"]["warning"]
 LOGGING_ERROR = config["logging"]["error"]
 
-from .Document_Controller import DocumentController
+from .document_controller import DocumentController
 from .Document_Table_View import DocumentTableView # 상대 경로 import
-from .Document_Processor import DocumentProcessor # 상대 경로 import
+from .document_processor import DocumentProcessor # 상대 경로 import
 from .Document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
 
 class DocumentManager(QWidget):
@@ -43,6 +44,9 @@ class DocumentManager(QWidget):
         self.document_processor = DocumentProcessor(database_manager, ocr_manager, parent, self, message_queue_manager)
         self.document_table_view = DocumentTableView(self)
         self.document_controller = DocumentController(self.document_processor, parent, self)
+        self.system_manager = SystemManager(config)
+
+        self.config = self.system_manager.get_config() # config 객체 가져오기
 
         logging.info("DocumentManager initialized.")
     
@@ -53,13 +57,14 @@ class DocumentManager(QWidget):
         """문서 관련 예외를 처리하고 메시지를 표시합니다."""
 
         message_id = f"{category}_{code}"
-        error_message = config.get_message(message_id)  # config.get_message() 사용
+        error_message = self.config.get_message(message_id)  # config.get_message() 호출
         if additional_message:
             error_message += f" - {additional_message}"
 
-        log_message = error_message.format(error=exception) # 로깅 메시지 포맷
-        logging.error(log_message)  # 에러 메시지 로깅
-        QMessageBox.critical(parent, "오류", error_message.format(error=exception))  # QMessageBox 표시
+        log_message = error_message.format(error=exception)
+        logging.error(log_message)
+        QMessageBox.critical(parent, "오류", error_message.format(error=exception))
+
     def show_message(self, parent, title, message):
         """메시지를 표시합니다."""
         QMessageBox.information(parent, title, message)
@@ -132,38 +137,37 @@ class DocumentManager(QWidget):
         """임시 파일을 관리합니다."""
         self.temp_file_manager.cleanup()
 
-    def create_temp_file(self, content, suffix=".tmp"):
-        """임시 파일을 생성합니다."""
-        return self.temp_file_manager.create_temp_file(content, suffix)
-
     def read_temp_file(self, file_path):
-        """임시 파일을 읽습니다."""
-        return self.temp_file_manager.read_temp_file(file_path)
+        """임시 파일의 내용을 읽어 반환합니다."""
+        return self.handle_file_operation("read", file_path)
 
-    def delete_temp_file(self, file_path):
-        """임시 파일을 삭제합니다."""
-        self.temp_file_manager.delete_temp_file(file_path)
+    def is_match_found(self, keyword, cell_text, match_exact):
+        """셀 텍스트에서 키워드가 존재하는지 확인"""
+        keyword_lower = keyword.lower()
+        cell_text_lower = cell_text.lower()
 
-    def cleanup_temp_files(self):
-        """모든 임시 파일을 정리합니다."""
-        self.temp_file_manager.cleanup()
+        if match_exact:
+            return cell_text_lower == keyword_lower
+        return keyword_lower in cell_text_lower
 
-    def backup_temp_files(self):
-        """임시 파일을 백업합니다."""
-        self.temp_file_manager.backup_temp_files()
+    def get_table_data(self, include_headers=False):
+        """DocumentTableView의 데이터를 2D 리스트 형태로 반환 (헤더 포함 여부 선택 가능)"""
+        data = []
+        headers = self.document_table_view.headers  # DocumentTableView의 headers 속성 사용
+        if headers is None:  # 헤더가 없을 경우 처리
+            headers = []
 
-    def restore_temp_files(self):
-        """백업된 임시 파일을 복원합니다."""
-        self.temp_file_manager.restore_temp_files()
+        for row in range(self.document_table_view.table_widget.rowCount()):
+            row_data = []
+            for col in range(self.document_table_view.table_widget.columnCount()):
+                item = self.document_table_view.table_widget.item(row, col)
+                row_data.append(item.text() if item is not None else "")  # item이 None인 경우 "" 추가
+            data.append(row_data)
 
-    def cleanup_all_temp_files(self, retention_time: int = 3600):
-        """임시 디렉토리의 모든 파일 정리 (보관 기간 적용)."""
-        self.temp_file_manager.cleanup_all_temp_files(retention_time)
-
-    def cleanup_specific_files(self, files: Optional[List[str]]):
-        """특정 파일들을 정리합니다."""
-        self.temp_file_manager.cleanup_specific_files(files)
-
+        if include_headers:
+            return headers, data
+        else:
+            return data
 
 def process_document_task(ch, method, properties, body):
     message = json.loads(body)
@@ -180,3 +184,4 @@ def process_database_packaging_task(ch, method, properties, body):
     time.sleep(5)  # 데이터베이스 패키징 작업 대신 5초 대기
     # 실제 데이터베이스 패키징 로직 구현 (SystemManager의 database_packaging 로직을 여기에 옮김)
     # ...
+

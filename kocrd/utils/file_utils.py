@@ -10,7 +10,7 @@ def log_error(message: str, title: str = "오류") -> None:
 
 def _show_message_box(message: str, title: str = "오류", icon: Any = None) -> None:
     """PyQt5 메시지 박스를 표시합니다. PyQt5가 설치된 경우에만 호출해야 합니다."""
-    from PyQt5.QtWidgets import QMessageBox # PyQt5 임포트를 함수 내부로 이동
+    from PyQt5.QtWidgets import QMessageBox  # PyQt5 임포트를 함수 내부로 이동
     if icon is None:
         icon = QMessageBox.Critical
     QMessageBox.critical(None, title, message)
@@ -44,7 +44,7 @@ def detect_encoding(file_path: str) -> str:
             return "utf-8"
         logging.info(f"Detected encoding: {encoding} (Confidence: {confidence})")
         return encoding
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         log_error(f"파일을 찾을 수 없습니다: {file_path}", "파일 오류")
         raise
     except OSError as e:
@@ -65,9 +65,22 @@ def copy_file(source_path: str, destination_path: str) -> str:
         shutil.copy2(source_path, destination_path)
         logging.info(f"파일 복사 완료: {destination_path}")
         return destination_path
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         log_error(f"원본 파일을 찾을 수 없습니다: {source_path}", "파일 오류")
         raise
     except OSError as e:
         log_error(f"파일 복사 오류: {e}", "파일 오류")
         raise
+
+def ensure_directory_exists(directory: str) -> None:
+    """디렉토리가 존재하지 않으면 생성합니다."""
+    try:
+        os.makedirs(directory, exist_ok=True)
+        logging.info(f"디렉토리 확인 완료: {directory}")
+    except OSError as e:
+        log_error(f"디렉토리 생성 오류: {e}", "디렉토리 오류")
+        raise
+
+def file_exists(file_path: str) -> bool:
+    """파일이 존재하는지 확인합니다."""
+    return os.path.isfile(file_path)
