@@ -5,23 +5,16 @@ import os
 from typing import Callable, Dict, Optional, Any
 from kocrd.utils.file_utils import show_message_box_safe
 import importlib  # 모듈 동적 로딩을 위한 import
+from kocrd.config.config import load_config
 
 class ConfigLoader:
-    def __init__(self, config_path):
-        self.config_path = config_path
-        self.config = self.load_config()
+    def __init__(self, config_path: str):
+        self.config = load_config(config_path)
         self.config_data = {}
         self.language_packs = {}
         self.current_language = "en"
         self.load_language_packs("kocrd/config/language")
         self.load_messages("kocrd/config/message/messages.json")
-
-    def load_config(self):
-        with open(self.config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-
-    def get_config(self):
-        return self.config
 
     def _load(self, file_path):
         try:
@@ -79,6 +72,15 @@ class ConfigLoader:
             queue_config = self.get("queues." + queue_name)
             if not queue_config:
                 raise ValueError(f"Queue configuration not found for '{queue_name}'")
+            import pika
+            connection = pika.BlockingConnection(pika.ConnectionParameters(**queue_config))
+            channel = connection.channel()
+            channel.queue_declare(queue=queue_name)
+            channel.basic_publish(exchange='', routing_key=queue_name, body=json.dumps(message))
+            connection.close()
+        except Exception as e:
+            logging.error(f"Error sending message to queue '{queue_name}': {e}")
+            show_message_box_safe(f"메시지 전송 오류: {e}", "오류")
 
     def handle_message(self, handler_instance, ch, method, properties, body):
         try:
@@ -235,3 +237,7 @@ class ConfigLoader:
         except Exception as e:
             logging.error(self.get_message("error.507", e=e))
             return False
+
+    def get_message(self, level: str, code: str) -> str:
+        """메시지 코드를 통해 메시지를 반환."""
+        return self.config["messages"][level].get(code, "")

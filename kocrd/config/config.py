@@ -10,6 +10,17 @@ from kocrd.config.loader import ConfigLoader
 from kocrd.config.message.message_handler import MessageHandler
 from kocrd.utils.file_utils import FileManager, show_message_box_safe # file_utils 함수 import
 
+def load_config(file_path: str) -> dict:
+    """JSON 파일을 로드하여 딕셔너리로 반환."""
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+def get_temp_dir() -> str:
+    """임시 디렉토리 경로를 반환."""
+    temp_dir = os.path.join(os.environ.get("TEMP", os.path.expanduser("~/.tmp")), "ocr_manager")
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
+
 class RabbitMQConfig:
     def __init__(self, config):
         self.host = config.get("rabbitmq.host")  # config.get() 사용
