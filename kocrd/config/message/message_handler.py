@@ -5,13 +5,11 @@ from typing import Callable, Dict, Optional, Any
 import os
 
 from kocrd.config.config import config
-from kocrd.handlers.training_event_handler import TrainingEventHandler
 
 class MessageHandler:
     def __init__(self, lang_dir="kocrd/config/language"):
         self.language_packs = self._load_language_packs(lang_dir)
         self.current_language = self._determine_language()
-        self.training_event_handler = TrainingEventHandler()
         self.message_handlers: Dict[str, Callable[[str, Dict[str, Any]], None]] = {
             "MSG": self._handle_message,
             "LOG": self._handle_message,
@@ -21,7 +19,6 @@ class MessageHandler:
             "OCR": self._handle_message,
         }
         self.messages = self._load_messages("kocrd/config/message/messages.json") # 기본 메시지 로드
-
     def _load_json(self, file_path):  # 중복 코드 제거
         try:
             with open(file_path, "r", encoding="utf-8") as f:

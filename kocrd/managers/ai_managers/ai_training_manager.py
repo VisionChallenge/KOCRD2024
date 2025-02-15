@@ -1,31 +1,30 @@
-# ai_training_manager.py
-
+# kocrd/managers/ai_managers/ai_training_manager.py
 import logging
 import json
 import os
 from sklearn.model_selection import train_test_split
 from PyQt5.QtWidgets import QMessageBox
-from config.config import get_message, handle_error, send_message_to_queue
+
+from kocrd.config.config import config
 
 class AITrainingManager:
     def __init__(self, model_manager, settings_manager, system_manager, ai_data_manager):
         self.model_manager = model_manager
         self.settings_manager = settings_manager
         self.system_manager = system_manager
-        self.ai_data_manager = ai_data_manager  # AIDataManager 인스턴스 주입
+        self.ai_data_manager = ai_data_manager
         self.document_embedding_path = self.settings_manager.get_setting("document_embedding_path")
 
     def prepare_training_data(self, data, features, label):
-        """훈련 데이터를 준비합니다."""
         try:
             X = data[features]
             y = data[label]
             return train_test_split(X, y, test_size=0.2)
         except KeyError as e:
-            handle_error(self.system_manager, "error", "501", e, "데이터 오류")
+            logging.error(config.get_message("501", error=e))
             return None, None, None, None
         except Exception as e:
-            handle_error(self.system_manager, "error", "505", e, "데이터 오류")
+            logging.error(config.get_message("505", error=e))
             return None, None, None, None
 
     def train_model(self, data, features, label):
@@ -50,10 +49,10 @@ class AITrainingManager:
 
             return result
         except ValueError as e:
-            handle_error(self.system_manager, "error", "05", e, "모델 오류")
+            logging.error(config.get_message("05", error=e, category="error")) # config.get_message() 사용, category 추가
             return None
         except Exception as e:
-            handle_error(self.system_manager, "error", "05", e, "학습 오류")
+            logging.error(config.get_message("05", error=e, category="error")) # config.get_message() 사용, category 추가
             return None
 
     def apply_parameters(self, parameters):
@@ -62,7 +61,7 @@ class AITrainingManager:
             self.model_manager.apply_parameters(parameters)
             logging.info("Parameters applied successfully.")
         except Exception as e:
-            handle_error(self.system_manager, "error", "05", e, "파라미터 오류")
+            logging.error(config.get_message("05", error=e, category="error")) # config.get_message() 사용, category 추가
 
     def train_with_parameters(self, file_path, features, label):
         """사용자가 제공한 파라미터 파일로 모델을 학습."""
@@ -76,8 +75,8 @@ class AITrainingManager:
             logging.info("Model training completed with provided parameters.")
             QMessageBox.information(None, "학습 완료", "모델 학습이 성공적으로 완료되었습니다.")
         except json.JSONDecodeError as e:
-            handle_error(self.system_manager, "error", "512", e, "파일 오류")
+            logging.error(config.get_message("512", error=e, category="file_error")) # config.get_message() 사용, category 추가
         except FileNotFoundError as e:
-            handle_error(self.system_manager, "error", "505", e, "파일 오류")
+            logging.error(config.get_message("505", error=e, category="file_error")) # config.get_message() 사용, category 추가
         except Exception as e:
-            handle_error(self.system_manager, "error", "505", e, "학습 오류")
+            logging.error(config.get_message("505", error=e, category="training_error")) # config.get_message() 사용, category 추가
