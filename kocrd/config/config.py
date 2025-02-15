@@ -41,7 +41,7 @@ class Config:
         self.rabbitmq = RabbitMQConfig(self)  # self 전달
         self.file_paths = FilePathConfig(self)  # self 전달
         self.ui = UIConfig(self)  # self 전달
-        self.message_handler = MessageHandler()
+        self.message_handler = MessageHandler(self.config_loader)
     def get(self, key_path, default=None):
         return self.config_loader.get(key_path, default)
     def validate(self, key_path: str, validator: callable, message: str):

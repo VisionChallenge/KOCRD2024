@@ -15,18 +15,20 @@ from PyQt5.QtWidgets import QMessageBox
 from kocrd.config.config import config, get_message  # config import 추가
 from kocrd.managers.document.document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
 from system_manager import SystemManager
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), 'Document_config.json')
-with open(config_path, 'r', encoding='utf-8') as f:
-    config = json.load(f)
+message_handler = MessageHandler(config_path)  # MessageHandler 인스턴스 생성
+config_loader = ConfigLoader(config_path)  # ConfigLoader 인스턴스 생성
 
-MAX_FILE_SIZE = config["MAX_FILE_SIZE"]
-MESSAGE_QUEUE = config["MESSAGE_QUEUE"]
-MESSAGE_TYPES = config["message_types"]
-QUEUES = config["queues"]
-LOGGING_INFO = config["logging"]["info"]
-LOGGING_WARNING = config["logging"]["warning"]
-LOGGING_ERROR = config["logging"]["error"]
+MAX_FILE_SIZE = config_loader.get_config()["MAX_FILE_SIZE"]
+MESSAGE_QUEUE = config_loader.get_config()["MESSAGE_QUEUE"]
+MESSAGE_TYPES = config_loader.get_config()["message_types"]
+QUEUES = config_loader.get_config()["queues"]
+LOGGING_INFO = config_loader.get_config()["logging"]["info"]
+LOGGING_WARNING = config_loader.get_config()["logging"]["warning"]
+LOGGING_ERROR = config_loader.get_config()["logging"]["error"]
 
 from .document_controller import DocumentController
 from .document_table_view import DocumentTableView # 상대 경로 import
@@ -38,7 +40,6 @@ class DocumentManager(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.message_queue_manager = message_queue_manager
-        self.database_manager = database_manager
         self.ocr_manager = ocr_manager
         self.temp_file_manager = DocumentTempManager()  # DocumentTempManager 인스턴스 생성
         self.document_processor = DocumentProcessor(database_manager, ocr_manager, parent, self, message_queue_manager)
@@ -47,6 +48,7 @@ class DocumentManager(QWidget):
         self.system_manager = SystemManager(config)
 
         self.config = self.system_manager.get_config() # config 객체 가져오기
+        self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
 
         logging.info("DocumentManager initialized.")
     
@@ -56,7 +58,7 @@ class DocumentManager(QWidget):
         """문서 관련 예외를 처리하고 메시지를 표시합니다."""
 
         message_id = f"{category}_{code}"
-        error_message = self.config.get_message(message_id)  # config.get_message() 호출
+        error_message = self.config_loader.get_message(message_id)  # 변경
         if additional_message:
             error_message += f" - {additional_message}"
 
@@ -91,7 +93,7 @@ class DocumentManager(QWidget):
             self.message_queue_manager.send_message(queue_name, message)
             logging.info(f"Message sent to queue '{queue_name}': {message}")
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
 
     def get_ui(self):
         return self.document_controller.get_ui()

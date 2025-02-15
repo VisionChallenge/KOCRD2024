@@ -8,6 +8,7 @@ import pandas as pd
 from fpdf import FPDF
 from kocrd.managers.document.document_table_view import DocumentTableView
 from kocrd.managers.document.document_manager import DocumentManager
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -32,6 +33,7 @@ class DocumentController(QWidget):
         self.message_queue_manager = system_manager.message_queue_manager # message_queue_manager 추가
         self.document_table_view = DocumentTableView(self)
         self.document_manager = DocumentManager(self.system_manager, self.parent, self.message_queue_manager)
+        self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
         self.init_ui()
         logging.info("DocumentController initialized.")
     def init_ui(self):
@@ -58,7 +60,7 @@ class DocumentController(QWidget):
                 self.document_table_view.add_document(document_info)
     def generate_report(self, output_path=None):
         """보고서를 생성합니다."""
-        default_report_filename = self.system_manager.get_setting("DEFAULT_REPORT_FILENAME")
+        default_report_filename = self.config_loader.get("DEFAULT_REPORT_FILENAME")  # 변경
         headers, data = self.document_manager.get_table_data(include_headers=True)  # 변경
         extracted_texts = []
         extracted_texts.append("\t".join(headers))
@@ -99,7 +101,7 @@ class DocumentController(QWidget):
         logging.info(f"PDF saved to {filename}.")
     def save_to_excel(self, file_path=None):
         """Excel 파일로 저장합니다."""
-        default_excel_filename = self.system_manager.get_setting("DEFAULT_EXCEL_FILENAME")
+        default_excel_filename = self.config_loader.get("DEFAULT_EXCEL_FILENAME")  # 변경
         headers, data = self.document_manager.get_table_data(include_headers=True)  # 변경
         df = pd.DataFrame(data, columns=headers)  # 변경
 
@@ -162,13 +164,13 @@ class DocumentController(QWidget):
 
             logging.info(f"Document search completed for keyword: {keyword}")
         except Exception as e:
-            self.document_manager.handle_document_exception(self.parent, "document", "520", e, "문서 검색 중 오류 발생")
+            self.document_manager.handle_document_exception(self.parent, "document", "520", e, "문서 검색 중 오류 발생")  # 변경
     def start_consuming(self):
         """메시지 큐에서 메시지를 소비."""
         try:
             self.message_queue_manager.start_consuming()
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
     def send_message(self, message):
         """메시지를 큐에 전송."""
         try:
@@ -176,4 +178,4 @@ class DocumentController(QWidget):
             self.document_processor.send_message(queue_name, message)
             logging.info(f"Message sent to queue '{queue_name}': {message}")
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
