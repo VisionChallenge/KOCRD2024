@@ -16,17 +16,14 @@ class DatabaseManager:
         self.config_loader = config_loader
         self.db_path = self.config_loader.get_file_paths().get("db_path")
         self.backup_path = self.config_loader.get_file_paths().get("backup_path")
-        # 기타 초기화 코드
         if self.backup_path:
             logging.info(f"Backup path set to: {self.backup_path}")
         self.db_file = os.path.join(self.db_path, "documents.db")
         self.engine = create_engine(f'sqlite:///{self.db_file}', pool_size=10, max_overflow=20)
 
-        # 이미지 및 텍스트 디렉토리 생성
         os.makedirs(os.path.join(self.db_path, "image"), exist_ok=True)
         os.makedirs(os.path.join(self.db_path, "text"), exist_ok=True)
 
-        # 데이터베이스 초기화
         self.initialize_database()
         logging.info(f"DatabaseManager initialized with database path: {self.db_path}")
 

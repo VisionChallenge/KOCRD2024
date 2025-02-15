@@ -30,7 +30,7 @@ class SystemManager:
         self.main_window = main_window
         self.manager_factory = ManagerFactory(self.config_loader)
         self.managers = {}
-        self.message_handler = MessageHandler()
+        self.message_handler = MessageHandler(self.config_loader)
         self.rabbitmq_manager = RabbitMQManager(self.config_loader)
         self.ai_model_manager = AIModelManager.get_instance()
         self.training_event_handler = TrainingEventHandler(self, self.ai_model_manager)
@@ -73,10 +73,10 @@ class SystemManager:
         QMessageBox.critical(self.main_window, "Error", message)
 
     def run_embedding_generation(self):
-        EmbeddingUtils.run_embedding_generation(self.config_loader) # self.settings_manager -> self.config_loader
+        EmbeddingUtils.run_embedding_generation(self.config_loader)
 
     def close_rabbitmq_connection(self):
-        self.rabbitmq_manager.close() # rabbitmq_manager의 close() 호출
+        self.rabbitmq_manager.close()
 
     def get_manager(self, manager_name: str) -> Optional[Any]:
         return self.managers.get(manager_name)
@@ -88,7 +88,7 @@ class SystemManager:
         """AIModelManager 인스턴스 반환."""
         return self.managers.get("ai_model")
 
-    def get_config(self): # config 객체 반환 메서드 추가
+    def get_config(self):
         return self.config
 
 # main_window 모듈을 나중에 임포트

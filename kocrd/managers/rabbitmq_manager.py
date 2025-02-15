@@ -1,10 +1,12 @@
 import pika
 import logging
 from kocrd.config.loader import ConfigLoader
+from kocrd.config.message.message_handler import MessageHandler
 
 class RabbitMQManager:
     def __init__(self, config_loader: ConfigLoader):
         self.config_loader = config_loader
+        self.message_handler = MessageHandler(self.config_loader)
         self.connection = None
         self.channel = None
         self._connect()
