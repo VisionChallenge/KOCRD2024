@@ -32,60 +32,22 @@ class ConfigLoader:
         merged.update(config2)
         return merged
 
-    def create_ocr_engine(self, engine_type: str):
-        try:
-            module_name = f"kocrd.ocr_engines.{engine_type}_ocr" # 모듈 이름 규칙 정의
-            module = importlib.import_module(module_name) # 모듈 동적 로딩
-            class_name = engine_type.capitalize() + "OCR"  # 클래스 이름 규칙 정의
-            ocr_engine_class = getattr(module, class_name)
-            return ocr_engine_class() # 인스턴스 생성
-        except ImportError:
-            logging.error(f"OCR 엔진 모듈을 찾을 수 없습니다: {engine_type}")
-            return None
-        except AttributeError:
-            logging.error(f"OCR 엔진 클래스를 찾을 수 없습니다: {engine_type}")
-            return None
-        except Exception as e:
-            logging.error(f"OCR 엔진 생성 중 오류: {e}")
-            return None
+    def create_ocr_engine(self, ocr_engine_type):
+        # OCR 엔진 생성 로직 구현
+        pass
 
+    def create_ai_model(self, model_type):
+        # 모델 생성 로직 구현
+        pass
 
-    def create_ai_model(self, model_type: str):
-        try:
-            module_name = f"kocrd.ai_models.{model_type}_model"  # 모듈 이름 규칙 정의
-            module = importlib.import_module(module_name)  # 모듈 동적 로딩
-            class_name = model_type.capitalize() + "Model"  # 클래스 이름 규칙 정의
-            ai_model_class = getattr(module, class_name)
-            return ai_model_class()  # 인스턴스 생성
-        except ImportError:
-            logging.error(f"AI 모델 모듈을 찾을 수 없습니다: {model_type}")
-            return None
-        except AttributeError:
-            logging.error(f"AI 모델 클래스를 찾을 수 없습니다: {model_type}")
-            return None
-        except Exception as e:
-            logging.error(f"AI 모델 생성 중 오류: {e}")
-            return None
+    def send_message_to_queue(self, queue_name, message):
+        # 큐에 메시지 전송 로직 구현
+        pass
 
-    def send_message_to_queue(self, queue_name: str, message: dict):
-        try:
-            queue_config = self.get("queues." + queue_name)
-            if not queue_config:
-                raise ValueError(f"Queue configuration not found for '{queue_name}'")
-            import pika
-            connection = pika.BlockingConnection(pika.ConnectionParameters(**queue_config))
-            channel = connection.channel()
-            channel.queue_declare(queue=queue_name)
-            channel.basic_publish(exchange='', routing_key=queue_name, body=json.dumps(message))
-            connection.close()
-        except Exception as e:
-            logging.error(f"Error sending message to queue '{queue_name}': {e}")
-            show_message_box_safe(f"메시지 전송 오류: {e}", "오류")
-
-    def handle_message(self, handler_instance, ch, method, properties, body):
+    def handle_message(self, manager, ch, method, properties, body):
         try:
             message = json.loads(body)
-            # 메시지 처리 로직 (기존 코드 유지)
+            manager.process_message(message)
         except json.JSONDecodeError as e:
             logging.error(f"JSON 디코딩 오류: {e}. 메시지 내용: {body}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)

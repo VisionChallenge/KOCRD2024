@@ -138,3 +138,32 @@ class SystemManager:
 
     def get_manager(self, manager_name):
         return self.managers.get(manager_name)
+
+import logging
+
+def handle_error(system_manager, event_name, message_id, error=None, **kwargs):
+    message = get_message(message_id, error=error, **kwargs)
+    if message:
+        logging.error(message)
+    else:
+        logging.error(f"Message with ID '{message_id}' not found.")
+    # 필요에 따라 system_manager를 사용하여 이벤트 트리거
+    # system_manager.trigger_event(event_name, {"error_message": str(message)})
+
+def get_message(message_id, error=None, **kwargs):
+    # 메시지 ID에 따른 메시지 로딩 로직 구현
+    messages = {
+        "501": "KeyError 발생: {error}",
+        "505": "일반 오류 발생: {error}",
+        "512": "JSON 디코딩 오류: {error}",
+        "518": "OCR 엔진 오류: {error}",
+        # 추가 메시지 ID와 메시지 매핑
+    }
+    message = messages.get(message_id, "알 수 없는 오류 발생")
+    if error:
+        message = message.format(error=error, **kwargs)
+    return message
+
+def send_message_to_queue(system_manager, queue_name, message):
+    # 큐에 메시지 전송 로직 구현
+    pass

@@ -76,7 +76,6 @@ class AIEventManager:
 
         except Exception as e:
             self._handle_error("training_failed", f"훈련 중 오류 발생: {e}")
-
     def handle_ocr_event(self, file_path, extracted_text):
         logging.info("Handling OCR completion event.")
         prediction_request = {
@@ -85,7 +84,6 @@ class AIEventManager:
             "reply_to": self.queues["events_queue"],
         }
         self.config_loader.send_message_to_queue(self.queues["prediction_requests"], prediction_request)  # config_loader.send_message_to_queue() 사용
-
     def handle_hyperparameter_change(self, hyperparameters):
         try:
             self.ai_training_manager.apply_parameters(hyperparameters)
@@ -109,13 +107,11 @@ class AIEventManager:
             self._handle_error("training_data_change_failed", f"훈련 데이터 변경 중 오류 발생: {e}")
         except Exception as e:
             self._handle_error("training_data_change_failed", f"훈련 데이터 변경 중 오류 발생: {e}")
-
     def handle_model_save_request(self, source_path, destination_path):
         try:
             config.file_manager.copy_file(source_path, destination_path)  # config.file_manager 사용
             logging.info(f"Model saved to {destination_path}")
         except Exception as e:
             self._handle_error("model_save_failed", f"모델 저장 중 오류 발생: {e}")
-
     def _handle_error(self, event_name, message_id, *args, **kwargs):
         config.handle_error(self.system_manager, "error", message_id, None,  *args, **kwargs) # config.handle_error() 사용
