@@ -14,10 +14,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 
 from managers.ocr.ocr_utils import OCRHelper
 from Settings.settings_manager import SettingsManager
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.config.config import get_temp_dir
 
 # managers_config.json 파일 로드
-with open(os.path.join(os.path.dirname(__file__), '../managers_config.json'), 'r') as f:
-    managers_config = json.load(f)
+config_loader = ConfigLoader(os.path.join(os.path.dirname(__file__), '../managers_config.json'))
+managers_config = config_loader.config
 
 class OCRManager:
     """OCR 작업을 처리하는 클래스."""
@@ -27,8 +29,8 @@ class OCRManager:
         self.tessdata_dir = tessdata_dir
         self.settings_manager = settings_manager
         self.progress_bar = monitoring_window.progress_bar if monitoring_window else None
-        self.temp_dir = os.path.join(os.environ.get("TEMP", os.path.expanduser("~/.tmp")), "ocr_manager")
-        os.makedirs(self.temp_dir, exist_ok=True)
+        self.temp_dir = get_temp_dir()
+        self.config_loader = config_loader
 
         if self.tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = self.tesseract_cmd
@@ -48,12 +50,12 @@ class OCRManager:
 
     def log(self, level: str, code: str, **kwargs) -> None:
         """간략화된 로깅."""
-        message = managers_config["messages"][level].get(code, "").format(**kwargs)
+        message = self.config_loader.get_message(level, code).format(**kwargs)
         getattr(logging, level)(message)
 
     def show_message(self, level: str, code: str) -> None:
         """간략화된 메시지 박스."""
-        message = managers_config["messages"].get(code, "")
+        message = self.config_loader.get_message(level, code)
         if level == "warning":
             QMessageBox.warning(self.monitoring_window, "오류", message)
 

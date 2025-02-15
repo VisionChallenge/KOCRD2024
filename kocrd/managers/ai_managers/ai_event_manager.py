@@ -6,6 +6,7 @@ from kocrd.config.config import config
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 from kocrd.User import FeedbackEventHandler
 from kocrd.config.message.message_handler import MessageHandler
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 
 class AIEventManager:
     def __init__(self, system_manager, settings_manager, model_manager, ai_data_manager, error_handler, queues):
@@ -18,9 +19,10 @@ class AIEventManager:
         self.ai_training_manager = AITrainingManager(model_manager, settings_manager, system_manager, ai_data_manager)
         self.feedback_event_handler = FeedbackEventHandler(ai_data_manager, error_handler)
         self.message_handler = MessageHandler()
+        self.config_loader = ConfigLoader("path/to/config.json")  # ConfigLoader 인스턴스 생성
 
     def handle_message(self, ch, method, properties, body):
-        config.handle_message(self, ch, method, properties, body)
+        self.config_loader.handle_message(self, ch, method, properties, body)  # config_loader.handle_message() 사용
 
     def handle_ocr_request(self, file_path):
         try:
@@ -30,9 +32,9 @@ class AIEventManager:
             self._handle_error("ocr_failed", "518", error=e, file_path=file_path)
 
     def _perform_ocr(self, file_path):
-        ocr_engine_type = config.get("ui.settings.ocr_engine")  # config.get() 직접 사용
+        ocr_engine_type = self.config_loader.get("ui.settings.ocr_engine")  # config_loader.get() 사용
         try:
-            ocr_engine = config.create_ocr_engine(ocr_engine_type)
+            ocr_engine = self.config_loader.create_ocr_engine(ocr_engine_type)
             image = Image.open(file_path)
             extracted_text = ocr_engine.perform_ocr(image)
             return extracted_text
@@ -81,7 +83,7 @@ class AIEventManager:
             "data": {"text": extracted_text, "file_path": file_path},
             "reply_to": self.queues["events_queue"],
         }
-        config.send_message_to_queue(self.queues["prediction_requests"], prediction_request)
+        self.config_loader.send_message_to_queue(self.queues["prediction_requests"], prediction_request)  # config_loader.send_message_to_queue() 사용
     def handle_hyperparameter_change(self, hyperparameters):
         try:
             self.ai_training_manager.apply_parameters(hyperparameters)
