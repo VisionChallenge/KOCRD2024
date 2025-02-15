@@ -4,6 +4,7 @@ import logging
 import json
 import os
 from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -13,6 +14,7 @@ class DocumentTableView(QWidget):
     def __init__(self, config_loader: ConfigLoader, parent=None):
         super().__init__(parent)
         self.config_loader = config_loader
+        self.message_handler = MessageHandler(config_loader)  # MessageHandler 인스턴스 생성
         self.table_widget = QTableWidget()
         self.headers = self.config_loader.get("headers")
         self.init_ui()
@@ -38,7 +40,7 @@ class DocumentTableView(QWidget):
     def get_selected_file_names(self):
         selected_items = self.table_widget.selectedItems()
         if not selected_items:
-            QMessageBox.warning(self.parent, "선택 오류", self.config_loader.get_message("error.921"))  # 변경
+            QMessageBox.warning(self.parent, "선택 오류", self.message_handler.get_message("error.921"))  # 변경
             return None
 
         selected_file_names = []

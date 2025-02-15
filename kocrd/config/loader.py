@@ -7,8 +7,21 @@ from kocrd.utils.file_utils import show_message_box_safe
 import importlib  # 모듈 동적 로딩을 위한 import
 
 class ConfigLoader:
-    def __init__(self):
+    def __init__(self, config_path):
+        self.config_path = config_path
+        self.config = self.load_config()
         self.config_data = {}
+        self.language_packs = {}
+        self.current_language = "en"
+        self.load_language_packs("kocrd/config/language")
+        self.load_messages("kocrd/config/message/messages.json")
+
+    def load_config(self):
+        with open(self.config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    def get_config(self):
+        return self.config
 
     def _load(self, file_path):
         try:
@@ -66,15 +79,6 @@ class ConfigLoader:
             queue_config = self.get("queues." + queue_name)
             if not queue_config:
                 raise ValueError(f"Queue configuration not found for '{queue_name}'")
-            import pika
-            connection = pika.BlockingConnection(pika.ConnectionParameters(**queue_config))
-            channel = connection.channel()
-            channel.queue_declare(queue=queue_name)
-            channel.basic_publish(exchange='', routing_key=queue_name, body=json.dumps(message))
-            connection.close()
-        except Exception as e:
-            logging.error(f"Error sending message to queue '{queue_name}': {e}")
-            show_message_box_safe(f"메시지 전송 오류: {e}", "오류")
 
     def handle_message(self, handler_instance, ch, method, properties, body):
         try:
@@ -142,11 +146,13 @@ class ConfigLoader:
         return self.get("file_settings")
 
     def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
-        messages = self.get("messages")
-        if messages:
-            message = messages.get(message_id)
-            if message:
-                return message.format(*args, **kwargs)
+        lang_pack = self.language_packs.get(self.current_language)
+        if not lang_pack:
+            logging.error(f"Language pack for '{self.current_language}' not found.")
+            return None
+        message = lang_pack.get(message_id) or self.messages.get(message_id)
+        if message:
+            return message.format(*args, **kwargs)
         logging.error(f"Message ID '{message_id}' not found.")
         return None
 
@@ -176,3 +182,56 @@ class ConfigLoader:
 
     def get_database_init_queries(self):
         return self.get("database.init_queries")
+
+    def load_language_packs(self, lang_dir):
+        for filename in os.listdir(lang_dir):
+            if filename.endswith(".json"):
+                file_path = os.path.join(lang_dir, filename)
+                lang_pack = self._load_json(file_path)
+                language_code = lang_pack.get("language_code")
+                if language_code:
+                    self.language_packs[language_code] = lang_pack
+                else:
+                    logging.warning(f"Language pack '{filename}' does not have 'language_code' attribute.")
+        self.current_language = self._determine_language()
+
+    def load_messages(self, message_file_path):
+        self.messages = self._load_json(message_file_path)
+
+    def _determine_language(self):
+        preferred_language = self.get("ui.language")
+        if preferred_language and preferred_language in self.language_packs:
+            return preferred_language
+        if not self.language_packs:
+            logging.warning("No language packs found. Using default language 'en'.")
+            return "en"
+        return list(self.language_packs.keys())[0]
+
+    def handle_file_operation(self, operation, file_path, content=None, destination=None):
+        """파일 작업을 공통적으로 처리하는 함수 (확장)"""
+        try:
+            if operation == "write":
+                with open(file_path, 'w', encoding='utf-8') as file:
+                    file.write(content)
+                return True
+            elif operation == "read":
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    return file.read()
+            elif operation == "delete":
+                os.remove(file_path)
+                return True
+            elif operation == "copy":  # 파일 복사 기능 추가
+                shutil.copy2(file_path, destination)  # 메타데이터 보존을 위해 copy2 사용
+                return True
+            elif operation == "move": # 파일 이동 기능 추가
+                shutil.move(file_path, destination)
+                return True
+            else:
+                logging.error(self.get_message("error.507", e=f"Unsupported operation: {operation}"))
+                return False
+        except FileNotFoundError:
+            logging.warning(self.get_message("warning.401", file_path=file_path))
+            return False
+        except Exception as e:
+            logging.error(self.get_message("error.507", e=e))
+            return False

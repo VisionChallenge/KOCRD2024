@@ -9,6 +9,7 @@ from fpdf import FPDF
 from kocrd.managers.document.document_table_view import DocumentTableView
 from kocrd.managers.document.document_manager import DocumentManager
 from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -34,6 +35,7 @@ class DocumentController(QWidget):
         self.document_table_view = DocumentTableView(self)
         self.document_manager = DocumentManager(self.system_manager, self.parent, self.message_queue_manager)
         self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
+        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 인스턴스 생성
         self.init_ui()
         logging.info("DocumentController initialized.")
     def init_ui(self):
@@ -170,7 +172,7 @@ class DocumentController(QWidget):
         try:
             self.message_queue_manager.start_consuming()
         except Exception as e:
-            logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
+            logging.error(self.message_handler.get_message("error.520", error=e))  # 변경
     def send_message(self, message):
         """메시지를 큐에 전송."""
         try:

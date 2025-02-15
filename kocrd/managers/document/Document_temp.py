@@ -7,10 +7,12 @@ import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
 from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
 
 class DocumentTempManager:
     def __init__(self, config_loader: ConfigLoader):
         self.config_loader = config_loader
+        self.message_handler = MessageHandler(config_loader)  # MessageHandler 인스턴스 생성
         self.temp_files = []
         self.temp_dir = tempfile.mkdtemp()
         self.backup_dir = os.path.join(self.temp_dir, "backup")
@@ -50,12 +52,12 @@ class DocumentTempManager:
                 file_path = os.path.join(self.temp_dir, filename)
                 backup_path = os.path.join(self.backup_dir, filename) # 백업 경로 설정
                 if os.path.isfile(file_path):
-                    if not self.handle_file_operation("copy", file_path, destination=backup_path): # 변경
+                    if not self.config_loader.handle_file_operation("copy", file_path, destination=backup_path): # 변경
                         return False # 백업 실패 시 False 반환
             logging.info("Temporary files backed up.")
             return True
         except Exception as e:
-            logging.error(self.config_loader.get_message("error.507", e=e))
+            logging.error(self.message_handler.get_message("error.507", e=e))
             return False
 
     def restore_temp_files(self):
@@ -65,12 +67,12 @@ class DocumentTempManager:
                 file_path = os.path.join(self.backup_dir, filename)
                 restore_path = os.path.join(self.temp_dir, filename) # 복원 경로 설정
                 if os.path.isfile(file_path):
-                    if not self.handle_file_operation("copy", file_path, destination=restore_path): # 변경
+                    if not self.config_loader.handle_file_operation("copy", file_path, destination=restore_path): # 변경
                         return False # 복원 실패 시 False 반환
             logging.info("Temporary files restored.")
             return True
         except Exception as e:
-            logging.error(self.config_loader.get_message("error.507", e=e))
+            logging.error(self.message_handler.get_message("error.507", e=e))
             return False
 
     def cleanup_all_temp_files(self, retention_time: int = 3600):
@@ -87,9 +89,9 @@ class DocumentTempManager:
                         logging.info(f"Expired temporary file removed: {file_path}")
             logging.info(f"Temporary directory cleaned.")
         except FileNotFoundError:
-            logging.warning(self.config_loader.get_message("warning.401", temp_dir=self.temp_dir))
+            logging.warning(self.message_handler.get_message("warning.401", temp_dir=self.temp_dir))
         except Exception as e:
-            logging.error(self.config_loader.get_message("error.507", e=e))
+            logging.error(self.message_handler.get_message("error.507", e=e))
 
     def cleanup_specific_files(self, files: Optional[List[str]]):
         """특정 파일들을 정리합니다."""
@@ -99,36 +101,11 @@ class DocumentTempManager:
                     os.remove(file_path)
                     logging.info(f"File removed: {file_path}")
                 except FileNotFoundError:
-                    logging.warning(self.config_loader.get_message("warning.401", file_path=file_path))
+                    logging.warning(self.message_handler.get_message("warning.401", file_path=file_path))
                 except Exception as e:
-                    logging.error(self.config_loader.get_message("error.507", e=e))
+                    logging.error(self.message_handler.get_message("error.507", e=e))
         else:
             self.cleanup_all_temp_files()
     def handle_file_operation(self, operation, file_path, content=None, destination=None):
         """파일 작업을 공통적으로 처리하는 함수 (확장)"""
-        try:
-            if operation == "write":
-                with open(file_path, 'w', encoding='utf-8') as file:
-                    file.write(content)
-                return True
-            elif operation == "read":
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    return file.read()
-            elif operation == "delete":
-                os.remove(file_path)
-                return True
-            elif operation == "copy":  # 파일 복사 기능 추가
-                shutil.copy2(file_path, destination)  # 메타데이터 보존을 위해 copy2 사용
-                return True
-            elif operation == "move": # 파일 이동 기능 추가
-                shutil.move(file_path, destination)
-                return True
-            else:
-                logging.error(self.config_loader.get_message("error.507", e=f"Unsupported operation: {operation}"))
-                return False
-        except FileNotFoundError:
-            logging.warning(self.config_loader.get_message("warning.401", file_path=file_path))
-            return False
-        except Exception as e:
-            logging.error(self.config_loader.get_message("error.507", e=e))
-            return False
+        return self.config_loader.handle_file_operation(operation, file_path, content, destination)  # 변경

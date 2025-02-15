@@ -49,6 +49,7 @@ class DocumentManager(QWidget):
 
         self.config = self.system_manager.get_config() # config 객체 가져오기
         self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
+        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 인스턴스 생성
 
         logging.info("DocumentManager initialized.")
     
@@ -58,7 +59,7 @@ class DocumentManager(QWidget):
         """문서 관련 예외를 처리하고 메시지를 표시합니다."""
 
         message_id = f"{category}_{code}"
-        error_message = self.config_loader.get_message(message_id)  # 변경
+        error_message = self.message_handler.get_message(message_id)  # 변경
         if additional_message:
             error_message += f" - {additional_message}"
 
@@ -93,7 +94,7 @@ class DocumentManager(QWidget):
             self.message_queue_manager.send_message(queue_name, message)
             logging.info(f"Message sent to queue '{queue_name}': {message}")
         except Exception as e:
-            logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
+            logging.error(self.message_handler.get_message("error.520", error=e))  # 변경
 
     def get_ui(self):
         return self.document_controller.get_ui()
