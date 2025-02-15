@@ -36,8 +36,8 @@ class ManagerFactory:
         module = __import__(module_name, fromlist=[class_name])
         return getattr(module, class_name)
     def create_temp_file_manager(self):
-        return TempFileManager(self.settings_manager)
+        return TempFileManager(self.config_manager)
 
     def create_database_manager(self):
-        return DatabaseManager(self.settings_manager.get_setting("db_path"), self.settings_manager.get_setting("backup_path"))
+        return DatabaseManager(self.config_manager.get_file_paths().get("db_path"), self.config_manager.get_file_paths().get("backup_path"))
 

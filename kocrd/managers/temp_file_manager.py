@@ -13,21 +13,22 @@ import threading
 import pika
 import sys
 
-from kocrd.config.config import ConfigManager # ConfigManager import
+from kocrd.config.loader import ConfigLoader # ConfigLoader import
+
 class TempFileManager:
-    def __init__(self, config_manager: ConfigManager):
-        self.config_manager = config_manager
-        self.temp_dir = self.config_manager.get("file_paths.temp_dir")  # 설정 파일에서 가져옴
+    def __init__(self, config_loader: ConfigLoader):
+        self.config_loader = config_loader
+        self.temp_dir = self.config_loader.get_file_paths().get("temp_dir")  # 설정 파일에서 가져옴
 
         if not self.temp_dir:
             self.temp_dir = tempfile.mkdtemp()
-            self.config_manager.set("file_paths.temp_dir", self.temp_dir)  # 설정 파일에 저장
+            self.config_loader.set("file_paths.temp_dir", self.temp_dir)  # 설정 파일에 저장
             logging.warning("temp_dir 설정이 없어 임시 디렉토리를 새로 생성했습니다.")
             
         os.makedirs(self.temp_dir, exist_ok=True)
         logging.info(f"TempFileManager initialized with temp_dir: {self.temp_dir}")
 
-        self.backup_interval = self.config_manager.get("TEMP_FILE_SAVE_INTERVAL", 600) # ConfigManager 사용
+        self.backup_interval = self.config_loader.get_constants().get("TEMP_FILE_SAVE_INTERVAL", 600) # ConfigLoader 사용
         self.backup_dir = os.path.join(self.temp_dir, "backup")
         os.makedirs(self.backup_dir, exist_ok=True)
         self.start_backup_timer()
@@ -65,9 +66,10 @@ class TempFileManager:
         """임시파일을 관리합니다."""
         # 임시파일 관리 로직 추가
         pass
+
     def cleanup_all_temp_files(self):
         """임시 디렉토리의 모든 파일 정리 (보관 기간 적용)."""
-        retention_time = self.config_manager.get("TEMP_FILE_RETENTION_TIME", 3600)  # ConfigManager 사용
+        retention_time = self.config_loader.get("TEMP_FILE_RETENTION_TIME", 3600)
         cutoff_time = datetime.now() - timedelta(seconds=retention_time)
 
         try:
@@ -79,13 +81,13 @@ class TempFileManager:
                         os.remove(file_path)
                         logging.info(f"Expired temporary file removed: {file_path}")
         except FileNotFoundError:
-            logging.warning(self.config_manager.get("error.502", f"Temporary directory not found: {self.temp_dir}")) # ConfigManager 사용
+            logging.warning(self.config_loader.get("error.502", f"Temporary directory not found: {self.temp_dir}"))
         except Exception as e:
-            logging.error(self.config_manager.get("error.503", f"Error cleaning temporary directory: {e}")) # ConfigManager 사용
+            logging.error(self.config_loader.get("error.503", f"Error cleaning temporary directory: {e}"))
 
-        logging.info(self.config_manager.get("messages.224", "Temporary directory cleaned.")) # ConfigManager 사용
+        logging.info(self.config_loader.get("messages.224", "Temporary directory cleaned."))
 
-    def cleanup_specific_files(self, files: Optional[List[str]]): # 통합된 cleanup_files
+    def cleanup_specific_files(self, files: Optional[List[str]]):
         """특정 파일들을 정리합니다."""
         if files:
             for file_path in files:
@@ -97,7 +99,7 @@ class TempFileManager:
                 except Exception as e:
                     logging.error(f"Error removing file {file_path}: {e}")
         else:
-            self.cleanup_all_temp_files() # 필요에 따라 all or specific 선택
+            self.cleanup_all_temp_files()
 
     def get_temp_file_path(self, file_name: str) -> str:
         return os.path.join(self.temp_dir, file_name)

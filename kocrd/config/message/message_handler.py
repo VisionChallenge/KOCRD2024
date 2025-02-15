@@ -66,16 +66,9 @@ class MessageHandler:
     def _handle_message(self, message_id, data, message_type):
         try:
             message = self.get_message(message_id, **data)
-            if message_type == "LOG":
-                logging.log(logging.INFO, message)
-            elif message_type == "WARN":
-                logging.warning(message)
-            elif message_type == "ERR":
-                logging.error(message)
-            elif message_type == "ID":
-                logging.info(message)
-            elif message_type == "MSG":
-                logging.info(message)
+            if message_type in ["LOG", "WARN", "ERR", "ID", "MSG"]:
+                log_function = getattr(logging, message_type.lower())
+                log_function(message)
             elif message_type == "OCR":
                 self.training_event_handler.handle_ocr_request(data.get("file_path"))
                 logging.info(message)

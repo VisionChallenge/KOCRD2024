@@ -1,16 +1,17 @@
 import pika
 import logging
+from kocrd.config.loader import ConfigLoader # ConfigLoader import
 
 class RabbitMQManager:
-    def __init__(self, config_manager):
-        self.config_manager = config_manager
+    def __init__(self, config_loader: ConfigLoader):
+        self.config_loader = config_loader
         self.connection = None
         self.channel = None
         self._connect()
 
     def _connect(self):
         try:
-            rabbitmq_settings = self.config_manager.get("rabbitmq")  # "rabbitmq" 키로 설정 접근
+            rabbitmq_settings = self.config_loader.get_rabbitmq_settings()
             credentials = pika.PlainCredentials(rabbitmq_settings["RABBITMQ_USER"], rabbitmq_settings["RABBITMQ_PASSWORD"])
             parameters = pika.ConnectionParameters(
                 host=rabbitmq_settings["RABBITMQ_HOST"],
@@ -22,14 +23,13 @@ class RabbitMQManager:
             self.connection = pika.BlockingConnection(parameters)
             self.channel = self.connection.channel()
 
-            # 큐 선언 (필요한 큐들을 선언)
             self._declare_queues(rabbitmq_settings)
 
             logging.info("🟢 RabbitMQ 연결 및 채널 생성 완료.")
 
         except pika.exceptions.AMQPConnectionError as e:
             logging.error(f"🔴 RabbitMQ 연결 실패: {e}")
-            raise  # 연결 실패 시 예외 발생시켜 시스템 초기화 실패 처리
+            raise
 
         except Exception as e:
             logging.error(f"🔴 RabbitMQ 설정 중 오류: {e}")
@@ -49,8 +49,8 @@ class RabbitMQManager:
     def publish(self, queue, message):
         try:
             self.channel.basic_publish(
-                exchange=self.config_manager.get("rabbitmq.RABBITMQ_EXCHANGE_NAME"), # exchange 이름 설정
-                routing_key=self.config_manager.get("rabbitmq.RABBITMQ_ROUTING_KEY"), # routing key 설정
+                exchange=self.config_loader.get("rabbitmq.RABBITMQ_EXCHANGE_NAME"), # exchange 이름 설정
+                routing_key=self.config_loader.get("rabbitmq.RABBITMQ_ROUTING_KEY"), # routing key 설정
                 body=message
             )
             logging.info(f"🟢 메시지 게시: {message} (큐: {queue})")

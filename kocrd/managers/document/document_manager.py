@@ -29,9 +29,9 @@ LOGGING_WARNING = config["logging"]["warning"]
 LOGGING_ERROR = config["logging"]["error"]
 
 from .document_controller import DocumentController
-from .Document_Table_View import DocumentTableView # 상대 경로 import
+from .document_table_view import DocumentTableView # 상대 경로 import
 from .document_processor import DocumentProcessor # 상대 경로 import
-from .Document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
+from .document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
 
 class DocumentManager(QWidget):
     def __init__(self, ocr_manager, database_manager, message_queue_manager, parent=None):
@@ -52,7 +52,6 @@ class DocumentManager(QWidget):
     
     def add_document_to_table(self, document_info):
         self.document_table_view.add_document(document_info)
-
     def handle_document_exception(self, parent, category, code, exception, additional_message=None):
         """문서 관련 예외를 처리하고 메시지를 표시합니다."""
 

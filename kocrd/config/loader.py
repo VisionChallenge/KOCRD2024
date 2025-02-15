@@ -173,11 +173,3 @@ class ConfigLoader:
 
         if system_manager:
             system_manager.handle_error(error_message, error_message_key)
-
-    def load_and_merge(self, config_files: list):
-        for file_path in config_files:
-            config_data = self._load(file_path)
-            if "error" in config_data:
-                self.handle_error(logging, "config_error", "512", config_data["message"])  # 수정: config_data["message"]
-                continue
-            self.config_data = self._merge_configs(self.config_data, config_data)
