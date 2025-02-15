@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Callable, Dict, Optional, Any
 import os
+import pika
 
 from kocrd.config.loader import ConfigLoader
 
@@ -54,3 +55,12 @@ class MessageHandler:
         except Exception as e:
             logging.error(f"메시지 처리 중 오류: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
+    def send_message(self, queue_name, message):
+        """지정된 큐에 메시지를 전송합니다."""
+        try:
+            send_message_to_queue(self, queue_name, message)
+            logging.info(f"Message sent to queue '{queue_name}': {message}")
+        except pika.exceptions.AMQPConnectionError as e:
+            logging.error(f"RabbitMQ 연결 오류: {e}")
+            raise

@@ -5,7 +5,7 @@ import os
 from typing import Callable, Dict, Optional, Any
 from kocrd.utils.file_utils import show_message_box_safe
 import importlib  # 모듈 동적 로딩을 위한 import
-from kocrd.config.config import load_config, load_json, merge_configs
+from kocrd.config.config import load_config, load_json, merge_configs, get_temp_dir
 
 class ConfigLoader:
     def __init__(self, config_path: str):
@@ -193,6 +193,19 @@ class ConfigLoader:
     def get_message(self, level: str, code: str) -> str:
         """메시지 코드를 통해 메시지를 반환."""
         return self.config["messages"][level].get(code, "")
+
+    def initialize_database(self, engine):
+        """SQLAlchemy를 사용하여 데이터베이스 테이블 생성."""
+        try:
+            config = self.get("database.init_queries")
+            queries = [text(query) for query in config]
+            with engine.connect() as conn:
+                for query in queries:
+                    conn.execute(query)
+                logging.info("Database initialized and required tables created.")
+        except (SQLAlchemyError, IOError, KeyError) as e:
+            logging.error(f"Error initializing database: {e}")
+            raise RuntimeError("Database initialization failed.") from e
 
 def load_tensorflow_model(model_path):
     """TensorFlow 모델 로딩 함수."""

@@ -6,20 +6,14 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 from kocrd.User import FeedbackEventHandler
-from kocrd.config.loader import ConfigLoader
+from kocrd.config.loader import ConfigLoader, load_json, merge_configs, get_temp_dir
 from kocrd.config.message.message_handler import MessageHandler
-from kocrd.utils.file_utils import FileManager, show_message_box_safe # file_utils 함수 import
+from kocrd.utils.file_utils import FileManager, show_message_box_safe
 
 def load_config(file_path: str) -> dict:
     """JSON 파일을 로드하여 딕셔너리로 반환."""
     with open(file_path, 'r') as f:
         return json.load(f)
-
-def get_temp_dir() -> str:
-    """임시 디렉토리 경로를 반환."""
-    temp_dir = os.path.join(os.environ.get("TEMP", os.path.expanduser("~/.tmp")), "ocr_manager")
-    os.makedirs(temp_dir, exist_ok=True)
-    return temp_dir
 
 def load_config(config_path: str):
     try:
@@ -49,6 +43,12 @@ def merge_configs(config1: dict, config2: dict) -> dict:
     merged.update(config2)
     return merged
 
+def get_temp_dir() -> str:
+    """임시 디렉토리 경로를 반환."""
+    temp_dir = os.path.join(os.environ.get("TEMP", os.path.expanduser("~/.tmp")), "ocr_manager")
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
+
 class RabbitMQConfig:
     def __init__(self, config):
         self.host = config.get("rabbitmq.host")  # config.get() 사용
@@ -71,15 +71,15 @@ class Config:
     def __init__(self, config_file):
         self.config_data = {}
         self.config_loader = ConfigLoader()
-        self.config_loader.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])  # load_and_merge 호출
+        self.config_loader.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])
         self.temp_dir = self.get("file_paths.temp_files")
         self.backup_dir = os.path.join(self.temp_dir, "backup")
-        os.makedirs(self.backup_dir, exist_ok=True) # ensure_directory_exists 제거 후 os.makedirs 사용
+        os.makedirs(self.backup_dir, exist_ok=True)
         self.temp_files = []
         self.file_manager = FileManager(self.temp_dir, self.backup_dir, self.temp_files)
-        self.rabbitmq = RabbitMQConfig(self)  # self 전달
-        self.file_paths = FilePathConfig(self)  # self 전달
-        self.ui = UIConfig(self)  # self 전달
+        self.rabbitmq = RabbitMQConfig(self)
+        self.file_paths = FilePathConfig(self)
+        self.ui = UIConfig(self)
         self.message_handler = MessageHandler(self.config_loader)
     def get(self, key_path, default=None):
         return self.config_loader.get(key_path, default)

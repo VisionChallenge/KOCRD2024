@@ -9,6 +9,7 @@ from sqlalchemy.orm import declarative_base
 import pika
 import json
 from kocrd.config.loader import ConfigLoader
+from kocrd.config.message.message_handler import MessageHandler
 
 
 class DatabaseManager:
@@ -24,7 +25,7 @@ class DatabaseManager:
         os.makedirs(os.path.join(self.db_path, "image"), exist_ok=True)
         os.makedirs(os.path.join(self.db_path, "text"), exist_ok=True)
 
-        self.initialize_database()
+        self.config_loader.initialize_database(self.engine)
         logging.info(f"DatabaseManager initialized with database path: {self.db_path}")
 
     def set_package_path(self, new_path):
@@ -34,19 +35,6 @@ class DatabaseManager:
         self.engine = create_engine(f'sqlite:///{self.db_file}', pool_size=10, max_overflow=20)
         self.initialize_database()
         logging.info(f"Database path updated to: {new_path}")
-
-    def initialize_database(self):
-        """SQLAlchemy를 사용하여 데이터베이스 테이블 생성."""
-        try:
-            config = self.config_loader.get("database.init_queries")
-            queries = [text(query) for query in config]
-            with self.engine.connect() as conn:
-                for query in queries:
-                    conn.execute(query)
-                logging.info("Database initialized and required tables created.")
-        except (SQLAlchemyError, IOError, KeyError) as e:
-            logging.error(f"Error initializing database: {e}")
-            raise RuntimeError("Database initialization failed.") from e
 
     def execute_query(self, query, params=None, fetch=False):
         """데이터베이스 쿼리를 실행하는 공통 메서드."""
@@ -160,12 +148,8 @@ class DatabaseManager:
 
     def send_message(self, queue_name, message):
         """지정된 큐에 메시지를 전송합니다."""
-        try:
-            send_message_to_queue(self, queue_name, message)
-            logging.info(f"Message sent to queue '{queue_name}': {message}")
-        except pika.exceptions.AMQPConnectionError as e:
-            logging.error(f"RabbitMQ 연결 오류: {e}")
-            raise
+        message_handler = MessageHandler()
+        message_handler.send_message(queue_name, message)
 
     def _execute_and_log(self, query, params, success_message):
         """쿼리를 실행하고 성공 메시지를 로깅합니다."""
