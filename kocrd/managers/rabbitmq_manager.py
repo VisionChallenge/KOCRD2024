@@ -45,20 +45,19 @@ class RabbitMQManager:
             rabbitmq_settings["RABBITMQ_FEEDBACK_QUEUE"]
         ]
         for queue in queues:
-            self.channel.queue_declare(queue=queue, durable=True)  # durable=True: 큐가 broker 재시작 후에도 유지되도록 설정
+            self.channel.queue_declare(queue=queue, durable=True)
             logging.info(f"🟢 큐 '{queue}' 선언 완료.")
 
     def publish(self, queue, message):
         try:
             self.channel.basic_publish(
-                exchange=self.config_loader.get("rabbitmq.RABBITMQ_EXCHANGE_NAME"), # exchange 이름 설정
-                routing_key=self.config_loader.get("rabbitmq.RABBITMQ_ROUTING_KEY"), # routing key 설정
+                exchange=self.config_loader.get("rabbitmq.RABBITMQ_EXCHANGE_NAME"),
+                routing_key=self.config_loader.get("rabbitmq.RABBITMQ_ROUTING_KEY"),
                 body=message
             )
             logging.info(f"🟢 메시지 게시: {message} (큐: {queue})")
         except pika.exceptions.AMQPChannelError as e:
             logging.error(f"🔴 메시지 게시 실패: {e}")
-            # 재연결 시도 등의 추가 로직 고려
         except Exception as e:
             logging.error(f"🔴 메시지 게시 중 오류: {e}")
 
@@ -66,10 +65,9 @@ class RabbitMQManager:
         try:
             self.channel.basic_consume(queue=queue, on_message_callback=callback, auto_ack=False)
             logging.info(f"🟢 큐 '{queue}'에서 메시지 수신 시작.")
-            self.channel.start_consuming()  # 이 메서드는 blocking 메서드입니다.
+            self.channel.start_consuming()
         except pika.exceptions.AMQPChannelError as e:
             logging.error(f"🔴 메시지 수신 실패: {e}")
-            # 재연결 시도 등의 추가 로직 고려
         except KeyboardInterrupt:
             logging.info("🟢 수동 인터럽트 발생. RabbitMQ 수신 중지.")
             self.stop_consuming()
@@ -85,5 +83,5 @@ class RabbitMQManager:
             self.connection.close()
             logging.info("🟢 RabbitMQ 연결 종료.")
 
-    def __del__(self): # RabbitMQManager 객체가 사라질때 close() 호출
+    def __del__(self):
         self.close()
