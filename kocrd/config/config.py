@@ -21,6 +21,34 @@ def get_temp_dir() -> str:
     os.makedirs(temp_dir, exist_ok=True)
     return temp_dir
 
+def load_config(config_path: str):
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Config file not found: {config_path}")
+    except json.JSONDecodeError:
+        logging.error(f"Invalid JSON format: {config_path}")
+    except Exception as e:
+        logging.error(f"Error loading config file: {config_path} - {e}")
+    return {}
+
+def load_json(file_path: str):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"error": "FILE_NOT_FOUND", "message": f"File not found: {file_path}"}
+    except json.JSONDecodeError:
+        return {"error": "INVALID_JSON_FORMAT", "message": f"Invalid JSON format: {file_path}"}
+    except Exception as e:
+        return {"error": "FILE_LOAD_ERROR", "message": f"Error loading file: {file_path} - {e}"}
+
+def merge_configs(config1: dict, config2: dict) -> dict:
+    merged = config1.copy()
+    merged.update(config2)
+    return merged
+
 class RabbitMQConfig:
     def __init__(self, config):
         self.host = config.get("rabbitmq.host")  # config.get() 사용

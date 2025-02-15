@@ -5,19 +5,7 @@ import os
 from typing import Callable, Dict, Optional, Any
 from kocrd.utils.file_utils import show_message_box_safe
 import importlib  # 모듈 동적 로딩을 위한 import
-from kocrd.config.config import load_config
-
-def load_config(config_path: str):
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logging.error(f"Config file not found: {config_path}")
-    except json.JSONDecodeError:
-        logging.error(f"Invalid JSON format: {config_path}")
-    except Exception as e:
-        logging.error(f"Error loading config file: {config_path} - {e}")
-    return {}
+from kocrd.config.config import load_config, load_json, merge_configs
 
 class ConfigLoader:
     def __init__(self, config_path: str):
@@ -29,20 +17,10 @@ class ConfigLoader:
         self.load_messages("kocrd/config/message/messages.json")
 
     def _load(self, file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return {"error": "FILE_NOT_FOUND", "message": f"File not found: {file_path}"}
-        except json.JSONDecodeError:
-            return {"error": "INVALID_JSON_FORMAT", "message": f"Invalid JSON format: {file_path}"}
-        except Exception as e:
-            return {"error": "FILE_LOAD_ERROR", "message": f"Error loading file: {file_path} - {e}"}
+        return load_json(file_path)
 
     def _merge_configs(self, config1: dict, config2: dict) -> dict:
-        merged = config1.copy()
-        merged.update(config2)
-        return merged
+        return merge_configs(config1, config2)
 
     def create_ocr_engine(self, ocr_engine_type):
         # OCR 엔진 생성 로직 구현
@@ -216,24 +194,24 @@ class ConfigLoader:
         """메시지 코드를 통해 메시지를 반환."""
         return self.config["messages"][level].get(code, "")
 
-    def load_tensorflow_model(self, model_path):
-        """TensorFlow 모델 로딩 함수."""
-        try:
-            model = tf.keras.models.load_model(model_path)
-            logging.info(f"TensorFlow 모델 로딩 완료: {model_path}")
-            return model
-        except Exception as e:
-            self.handle_error(None, "model_load_error", "505", error=e, model_path=model_path)
-            return None
+def load_tensorflow_model(model_path):
+    """TensorFlow 모델 로딩 함수."""
+    try:
+        model = tf.keras.models.load_model(model_path)
+        logging.info(f"TensorFlow 모델 로딩 완료: {model_path}")
+        return model
+    except Exception as e:
+        handle_error(None, "model_load_error", "505", error=e, model_path=model_path)
+        return None
 
-    def load_gpt_model(self, gpt_model_path):
-        """GPT 모델 로딩 함수."""
-        try:
-            logging.info("GPT 모델 로딩 중...")
-            tokenizer = GPT2Tokenizer.from_pretrained(gpt_model_path)
-            gpt_model = GPT2LMHeadModel.from_pretrained(gpt_model_path)
-            logging.info(f"GPT 모델 로딩 완료: {gpt_model_path}")
-            return tokenizer, gpt_model
-        except Exception as e:
-            self.handle_error(None, "gpt_model_load_error", "505", error=e, model_path=gpt_model_path)
-            return None, None
+def load_gpt_model(gpt_model_path):
+    """GPT 모델 로딩 함수."""
+    try:
+        logging.info("GPT 모델 로딩 중...")
+        tokenizer = GPT2Tokenizer.from_pretrained(gpt_model_path)
+        gpt_model = GPT2LMHeadModel.from_pretrained(gpt_model_path)
+        logging.info(f"GPT 모델 로딩 완료: {gpt_model_path}")
+        return tokenizer, gpt_model
+    except Exception as e:
+        handle_error(None, "gpt_model_load_error", "505", error=e, model_path=gpt_model_path)
+        return None, None
