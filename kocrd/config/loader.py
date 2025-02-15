@@ -215,3 +215,25 @@ class ConfigLoader:
     def get_message(self, level: str, code: str) -> str:
         """메시지 코드를 통해 메시지를 반환."""
         return self.config["messages"][level].get(code, "")
+
+def load_tensorflow_model(model_path):
+    """TensorFlow 모델 로딩 함수."""
+    try:
+        model = tf.keras.models.load_model(model_path)
+        logging.info(f"TensorFlow 모델 로딩 완료: {model_path}")
+        return model
+    except Exception as e:
+        handle_error(None, "model_load_error", "505", error=e, model_path=model_path)
+        return None
+
+def load_gpt_model(gpt_model_path):
+    """GPT 모델 로딩 함수."""
+    try:
+        logging.info("GPT 모델 로딩 중...")
+        tokenizer = GPT2Tokenizer.from_pretrained(gpt_model_path)
+        gpt_model = GPT2LMHeadModel.from_pretrained(gpt_model_path)
+        logging.info(f"GPT 모델 로딩 완료: {gpt_model_path}")
+        return tokenizer, gpt_model
+    except Exception as e:
+        handle_error(None, "gpt_model_load_error", "505", error=e, model_path=gpt_model_path)
+        return None, None

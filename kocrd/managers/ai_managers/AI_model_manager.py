@@ -10,7 +10,7 @@ from kocrd.config.config import handle_error
 from kocrd.managers.database_manager import DatabaseManager
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 from kocrd.config.message.message_handler import MessageHandler
-from kocrd.config.loader import ConfigLoader
+from kocrd.config.loader import ConfigLoader, load_tensorflow_model, load_gpt_model
 
 def singleton(cls):
     instances = {}
@@ -35,25 +35,11 @@ class AIModelManager:
         self.ai_training_manager = ai_training_manager
         self.message_handler = MessageHandler()
         self.config_loader = config_loader
-        self._load_tensorflow_model()
-        self._load_gpt_model()
+        self._load_models()
 
-    def _load_tensorflow_model(self):
-        try:
-            if self.model_path:
-                self.model = tf.keras.models.load_model(self.model_path)
-                logging.info(f"TensorFlow 모델 로딩 완료: {self.model_path}")
-        except Exception as e:
-            handle_error(self.system_manager, "model_load_error", "505", error=e, model_path=self.model_path)
-
-    def _load_gpt_model(self):
-        try:
-            logging.info("GPT 모델 로딩 중...")
-            self.tokenizer = GPT2Tokenizer.from_pretrained(self.gpt_model_path)
-            self.gpt_model = GPT2LMHeadModel.from_pretrained(self.gpt_model_path)
-            logging.info(f"GPT 모델 로딩 완료: {self.gpt_model_path}")
-        except Exception as e:
-            handle_error(self.system_manager, "gpt_model_load_error", "505", error=e, model_path=self.gpt_model_path)
+    def _load_models(self):
+        self.model = load_tensorflow_model(self.model_path)
+        self.tokenizer, self.gpt_model = load_gpt_model(self.gpt_model_path)
 
     def request_ai_training(self, features, label):
         try:
