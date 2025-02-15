@@ -1,6 +1,6 @@
 import pika
 import logging
-from kocrd.config.loader import ConfigLoader # ConfigLoader import
+from kocrd.config.loader import ConfigLoader
 
 class RabbitMQManager:
     def __init__(self, config_loader: ConfigLoader):

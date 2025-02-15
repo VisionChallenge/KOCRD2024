@@ -13,7 +13,7 @@ import threading
 import pika
 import sys
 
-from kocrd.config.loader import ConfigLoader # ConfigLoader import
+from kocrd.config.loader import ConfigLoader
 
 class TempFileManager:
     def __init__(self, config_loader: ConfigLoader):

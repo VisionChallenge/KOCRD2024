@@ -10,7 +10,7 @@ from kocrd.config.config import handle_error
 from kocrd.managers.database_manager import DatabaseManager
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 from kocrd.config.message.message_handler import MessageHandler
-from kocrd.config.loader import ConfigLoader, load_tensorflow_model, load_gpt_model
+from kocrd.config.loader import ConfigLoader
 
 def singleton(cls):
     instances = {}
@@ -26,20 +26,20 @@ def singleton(cls):
 @singleton
 class AIModelManager:
     def __init__(self, database_manager: DatabaseManager, ai_training_manager: AITrainingManager, config_loader: ConfigLoader):
-        self.model_path = config_loader.get("file_paths.ai_model_path")
-        self.gpt_model_path = config_loader.get("file_paths.gpt_model_path", "gpt2")
+        self.config_loader = config_loader
+        self.model_path = self.config_loader.get("file_paths.ai_model_path")
+        self.gpt_model_path = self.config_loader.get("file_paths.gpt_model_path", "gpt2")
         self.model: Optional[tf.keras.Model] = None
         self.tokenizer: Optional[GPT2Tokenizer] = None
         self.gpt_model: Optional[GPT2LMHeadModel] = None
         self.database_manager = database_manager
         self.ai_training_manager = ai_training_manager
         self.message_handler = MessageHandler()
-        self.config_loader = config_loader
         self._load_models()
 
     def _load_models(self):
-        self.model = load_tensorflow_model(self.model_path)
-        self.tokenizer, self.gpt_model = load_gpt_model(self.gpt_model_path)
+        self.model = self.config_loader.load_tensorflow_model(self.model_path)
+        self.tokenizer, self.gpt_model = self.config_loader.load_gpt_model(self.gpt_model_path)
 
     def request_ai_training(self, features, label):
         try:
@@ -47,7 +47,7 @@ class AIModelManager:
             self.train_ai(features, label)
             logging.info("AI 학습 완료")
         except Exception as e:
-            handle_error(self.system_manager, "ai_training_error", "505", error=e)
+            self.config_loader.handle_error(self.system_manager, "ai_training_error", "505", error=e)
             raise
 
     def train_ai(self, features, label):
@@ -84,7 +84,7 @@ class AIModelManager:
                                             pad_token_id=pad_token_id)
             return self.tokenizer.decode(output[0], skip_special_tokens=True)
         except Exception as e:
-            handle_error(self.system_manager, "gpt_text_generation_error", "505", error=e)
+            self.config_loader.handle_error(self.system_manager, "gpt_text_generation_error", "505", error=e)
             return "GPT 텍스트 생성 오류"
 
     def save_generated_text_to_db(self, file_name: str, text: str):

@@ -9,6 +9,7 @@ from kocrd.config.loader import ConfigLoader
 
 class AIEventManager:
     def __init__(self, system_manager, settings_manager, model_manager, ai_data_manager, error_handler, queues):
+        self.config_loader = ConfigLoader("path/to/config.json")
         self.system_manager = system_manager
         self.settings_manager = settings_manager
         self.model_manager = model_manager
@@ -18,7 +19,6 @@ class AIEventManager:
         self.ai_training_manager = AITrainingManager(model_manager, settings_manager, system_manager, ai_data_manager)
         self.feedback_event_handler = FeedbackEventHandler(ai_data_manager, error_handler)
         self.message_handler = MessageHandler()
-        self.config_loader = ConfigLoader("path/to/config.json")
 
     def handle_message(self, ch, method, properties, body):
         self.config_loader.handle_message(self, ch, method, properties, body)
@@ -28,7 +28,7 @@ class AIEventManager:
             extracted_text = self._perform_ocr(file_path)
             self.system_manager.trigger_event("ocr_completed", {"file_path": file_path, "extracted_text": extracted_text})
         except Exception as e:
-            handle_error(self.system_manager, "ocr_failed", "518", error=e, file_path=file_path)
+            self.config_loader.handle_error(self.system_manager, "ocr_failed", "518", error=e, file_path=file_path)
 
     def _perform_ocr(self, file_path):
         ocr_engine_type = self.config_loader.get("ui.settings.ocr_engine")
@@ -74,7 +74,7 @@ class AIEventManager:
             self.system_manager.trigger_event("training_completed", {"model_path": model_save_path})
 
         except Exception as e:
-            handle_error(self.system_manager, "training_failed", f"훈련 중 오류 발생: {e}")
+            self.config_loader.handle_error(self.system_manager, "training_failed", f"훈련 중 오류 발생: {e}")
 
     def handle_ocr_event(self, file_path, extracted_text):
         logging.info("Handling OCR completion event.")

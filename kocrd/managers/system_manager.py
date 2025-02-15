@@ -65,12 +65,12 @@ class SystemManager:
         """RabbitMQ 메시지를 처리합니다."""
         self.message_handler.handle_message(ch, method, properties, body, self)
 
-    def handle_error(self, message, error_message_key=None):  # error_message_key 추가
+    def handle_error(self, message, error_message_key=None):
         if error_message_key:
-            logging.error(f"{message} (Error Key: {error_message_key})")  # 키 정보 로깅
+            logging.error(f"{message} (Error Key: {error_message_key})")
         else:
             logging.error(message)
-        QMessageBox.critical(self.main_window, "Error", message)  # QMessageBox 그대로 사용
+        QMessageBox.critical(self.main_window, "Error", message)
 
     def run_embedding_generation(self):
         EmbeddingUtils.run_embedding_generation(self.config_loader) # self.settings_manager -> self.config_loader
