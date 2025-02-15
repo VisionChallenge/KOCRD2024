@@ -6,9 +6,9 @@ import time
 from typing import Callable, Dict, Any
 
 import pika.exceptions
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 
 from kocrd.managers.ai_managers.ai_model_manager import AIModelManager
-from kocrd.config.config import config
 
 class AIOCRRunning:
     def __init__(self, system_manager, ai_data_manager):
@@ -16,27 +16,27 @@ class AIOCRRunning:
         self.ai_data_manager = ai_data_manager
         self.ai_model_manager = AIModelManager.get_instance()
         self.rabbitmq_manager = self.ai_model_manager.rabbitmq_manager
+        self.config_loader = ConfigLoader("path/to/config.json")  # ConfigLoader 인스턴스 생성
 
     def create_ai_request(self, message_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "type": message_type,
             "data": data,
-            "reply_to": config.get("queues.events")  # config.get() 사용
+            "reply_to": self.config_loader.get("queues.events")  # config_loader.get() 사용
         }
 
-    def handle_ocr_result(self, ch, method, properties, body):  # 메서드 이름 변경
+    def handle_ocr_result(self, ch, method, properties, body):
         """OCR 결과 메시지 처리."""
-        config.handle_message(self, ch, method, properties, body)  # config.handle_message() 사용
+        self.config_loader.handle_message(self, ch, method, properties, body)  # config_loader.handle_message() 사용
         try:
             message = json.loads(body)
-            config.send_message_to_queue("events_queue", message)  # config.send_message_to_queue() 사용, queue_name 직접 전달
+            self.config_loader.send_message_to_queue("events_queue", message)  # config_loader.send_message_to_queue() 사용
         except json.JSONDecodeError as e:
             logging.error(f"JSON 디코딩 오류: {e}. 메시지 내용: {body}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         except Exception as e:
             logging.error(f"메시지 처리 오류: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-
 
     def consume_messages(self, queue_name: str, callback: Callable):
         """메시지 소비."""
@@ -52,9 +52,9 @@ class AIOCRRunning:
             print('프로그램을 종료합니다.')
             self.rabbitmq_manager.close_connection()
         except Exception as e:
-            logging.error(f"메시지 소비 중 오류: {e}") # handle_error 제거, logging.error 직접 사용
+            logging.error(f"메시지 소비 중 오류: {e}")
             self.rabbitmq_manager.close_connection()
 
     def main(self):
-        queue_name = config.get("queues.ocr_results")  # config.get() 사용
-        self.consume_messages(queue_name, self.handle_ocr_result)  # 수정된 handle_ocr_result 사용
+        queue_name = self.config_loader.get("queues.ocr_results")  # config_loader.get() 사용
+        self.consume_messages(queue_name, self.handle_ocr_result)
