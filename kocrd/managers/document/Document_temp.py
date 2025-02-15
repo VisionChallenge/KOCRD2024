@@ -6,15 +6,11 @@ import shutil
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-from kocrd.config.config import config
-import json
-
-config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
-with open(config_path, 'r', encoding='utf-8') as f:
-    config = json.load(f)
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 
 class DocumentTempManager:
-    def __init__(self):
+    def __init__(self, config_loader: ConfigLoader):
+        self.config_loader = config_loader
         self.temp_files = []
         self.temp_dir = tempfile.mkdtemp()
         self.backup_dir = os.path.join(self.temp_dir, "backup")
@@ -59,7 +55,7 @@ class DocumentTempManager:
             logging.info("Temporary files backed up.")
             return True
         except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
+            logging.error(self.config_loader.get_message("error.507", e=e))
             return False
 
     def restore_temp_files(self):
@@ -74,7 +70,7 @@ class DocumentTempManager:
             logging.info("Temporary files restored.")
             return True
         except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
+            logging.error(self.config_loader.get_message("error.507", e=e))
             return False
 
     def cleanup_all_temp_files(self, retention_time: int = 3600):
@@ -91,9 +87,9 @@ class DocumentTempManager:
                         logging.info(f"Expired temporary file removed: {file_path}")
             logging.info(f"Temporary directory cleaned.")
         except FileNotFoundError:
-            logging.warning(config["messages"]["warning"]["401"].format(temp_dir=self.temp_dir))
+            logging.warning(self.config_loader.get_message("warning.401", temp_dir=self.temp_dir))
         except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
+            logging.error(self.config_loader.get_message("error.507", e=e))
 
     def cleanup_specific_files(self, files: Optional[List[str]]):
         """특정 파일들을 정리합니다."""
@@ -103,9 +99,9 @@ class DocumentTempManager:
                     os.remove(file_path)
                     logging.info(f"File removed: {file_path}")
                 except FileNotFoundError:
-                    logging.warning(config["messages"]["warning"]["401"].format(file_path=file_path))
+                    logging.warning(self.config_loader.get_message("warning.401", file_path=file_path))
                 except Exception as e:
-                    logging.error(config["messages"]["error"]["507"].format(e=e))
+                    logging.error(self.config_loader.get_message("error.507", e=e))
         else:
             self.cleanup_all_temp_files()
     def handle_file_operation(self, operation, file_path, content=None, destination=None):
@@ -128,11 +124,11 @@ class DocumentTempManager:
                 shutil.move(file_path, destination)
                 return True
             else:
-                logging.error(config["messages"]["error"]["507"].format(e=f"Unsupported operation: {operation}"))
+                logging.error(self.config_loader.get_message("error.507", e=f"Unsupported operation: {operation}"))
                 return False
         except FileNotFoundError:
-            logging.warning(config["messages"]["warning"]["401"].format(file_path=file_path))
+            logging.warning(self.config_loader.get_message("warning.401", file_path=file_path))
             return False
         except Exception as e:
-            logging.error(config["messages"]["error"]["507"].format(e=e))
+            logging.error(self.config_loader.get_message("error.507", e=e))
             return False

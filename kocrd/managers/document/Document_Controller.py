@@ -1,4 +1,4 @@
-# file_name: Document_Controller.py
+# kocrd/managers/document/document_controller.py
 
 import logging
 import os

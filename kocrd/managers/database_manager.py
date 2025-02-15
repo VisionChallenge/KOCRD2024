@@ -8,26 +8,27 @@ from datetime import datetime
 from sqlalchemy.orm import declarative_base
 import pika
 import json
+from kocrd.config.loader import ConfigLoader
 
-from kocrd.config.config import load_config, send_message_to_queue
 
 class DatabaseManager:
-    def __init__(self, db_path, backup_path=None):
-        self.db_path = db_path
-        self.backup_path = backup_path
+    def __init__(self, config_loader: ConfigLoader):
+        self.config_loader = config_loader
+        self.db_path = self.config_loader.get_file_paths().get("db_path")
+        self.backup_path = self.config_loader.get_file_paths().get("backup_path")
         # 기타 초기화 코드
         if self.backup_path:
             logging.info(f"Backup path set to: {self.backup_path}")
-        self.db_file = os.path.join(db_path, "documents.db")
+        self.db_file = os.path.join(self.db_path, "documents.db")
         self.engine = create_engine(f'sqlite:///{self.db_file}', pool_size=10, max_overflow=20)
 
         # 이미지 및 텍스트 디렉토리 생성
-        os.makedirs(os.path.join(db_path, "image"), exist_ok=True)
-        os.makedirs(os.path.join(db_path, "text"), exist_ok=True)
+        os.makedirs(os.path.join(self.db_path, "image"), exist_ok=True)
+        os.makedirs(os.path.join(self.db_path, "text"), exist_ok=True)
 
         # 데이터베이스 초기화
         self.initialize_database()
-        logging.info(f"DatabaseManager initialized with database path: {db_path}")
+        logging.info(f"DatabaseManager initialized with database path: {self.db_path}")
 
     def set_package_path(self, new_path):
         """데이터베이스 경로를 업데이트하고 엔진을 재초기화."""
@@ -40,8 +41,8 @@ class DatabaseManager:
     def initialize_database(self):
         """SQLAlchemy를 사용하여 데이터베이스 테이블 생성."""
         try:
-            config = load_config('config/development.json')
-            queries = [text(query) for query in config["database"]["init_queries"]]
+            config = self.config_loader.get("database.init_queries")
+            queries = [text(query) for query in config]
             with self.engine.connect() as conn:
                 for query in queries:
                     conn.execute(query)

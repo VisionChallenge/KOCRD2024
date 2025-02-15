@@ -3,22 +3,22 @@ from PyQt5.QtWidgets import QTableWidget, QVBoxLayout, QWidget, QTableWidgetItem
 import logging
 import json
 import os
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
 class DocumentTableView(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, config_loader: ConfigLoader, parent=None):
         super().__init__(parent)
+        self.config_loader = config_loader
         self.table_widget = QTableWidget()
-        self.headers = config["headers"]
+        self.headers = self.config_loader.get("headers")
         self.init_ui()
         logging.info("DocumentTableView initialized.")
     def init_ui(self):
         self.table_widget.setColumnCount(len(self.headers))
-        self.table_widget.setHorizontalHeaderLabels(self.headers)
-        self.table_widget.setSortingEnabled(True)
         layout = QVBoxLayout()
         layout.addWidget(self.table_widget)
         self.setLayout(layout)

@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QMessageBox, QFileDialog
 import mimetypes
 from sqlalchemy.exc import SQLAlchemyError
 from kocrd.config import development
+from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 
 # 설정 파일을 호출하도록 수정
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
@@ -38,6 +39,7 @@ class DocumentProcessor:
         self.database_manager = database_manager
         self.ocr_manager = ocr_manager
         self.parent = parent
+        self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
         logging.info("DocumentProcessor initialized.")
     def perform_ocr(self, file_path):
         """OCR을 수행하여 텍스트를 추출합니다."""
@@ -48,7 +50,7 @@ class DocumentProcessor:
                 raise ValueError(f"No text extracted for: {file_path}")
             return extracted_text
         except Exception as e:
-            logging.error(config["messages"]["error"]["519"].format(error=e))
+            logging.error(self.config_loader.get_message("error.519", error=e))
             raise
     def process_single_document(self, file_path):
         """단일 문서를 처리합니다 (유효성 검사, OCR, 정보 생성 및 저장)."""
@@ -122,12 +124,12 @@ class DocumentProcessor:
             logging.info(f"Document updated successfully: {file_name}")
             return True
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))
             return False
     def determine_document_type(self, text):
         """자동 문서 분석."""
         if not text:
-            logging.warning(config["messages"]["warning"]["505"])
+            logging.warning(self.config_loader.get_message("warning.505"))
             return "Unknown"
 
         try:
@@ -139,12 +141,12 @@ class DocumentProcessor:
             else:
                 return "Unknown"
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))
             return "Unknown"
 
     def save_ocr_images(self, pdf_file_path):
         """PDF 파일에서 OCR 이미지를 추출하고 저장합니다."""
-        logging.info(config["messages"]["log"]["506"].format(pdf_file_path=pdf_file_path))
+        logging.info(self.config_loader.get_message("log.506", pdf_file_path=pdf_file_path))
         try:
             poppler_path = self.ocr_manager.find_poppler_path()
             if not poppler_path:
@@ -155,9 +157,9 @@ class DocumentProcessor:
                 image.save(image_path)
                 logging.info(f"OCR image saved: {image_path}")
         except FileNotFoundError as e:
-            logging.error(config["messages"]["error"]["501"].format(e=e))
+            logging.error(self.config_loader.get_message("error.501", e=e))
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))
 
     def batch_import_documents(self):
         """문서를 일괄적으로 가져오고 처리합니다."""
@@ -176,7 +178,7 @@ class DocumentProcessor:
             return results
 
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))
             return []
 
     def get_valid_doc_types(self):
@@ -186,7 +188,7 @@ class DocumentProcessor:
             results = self.database_manager.execute_query(query, fetch=True)
             return [row['doc_type'] for row in results] if results else []
         except SQLAlchemyError as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))
             return []
 
     def send_message(self, message):
@@ -196,4 +198,4 @@ class DocumentProcessor:
             self.message_queue_manager.send_message(queue_name, message)
             logging.info(f"Message sent to queue '{queue_name}': {message}")
         except Exception as e:
-            logging.error(config["messages"]["error"]["520"].format(error=e))
+            logging.error(self.config_loader.get_message("error.520", error=e))

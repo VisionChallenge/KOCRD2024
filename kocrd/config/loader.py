@@ -173,3 +173,6 @@ class ConfigLoader:
 
         if system_manager:
             system_manager.handle_error(error_message, error_message_key)
+
+    def get_database_init_queries(self):
+        return self.get("database.init_queries")
