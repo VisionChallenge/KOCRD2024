@@ -5,7 +5,6 @@ import os
 from sklearn.model_selection import train_test_split
 from PyQt5.QtWidgets import QMessageBox
 
-from kocrd.config.config import config
 from kocrd.config.config import handle_error
 from kocrd.config.loader import ConfigLoader
 

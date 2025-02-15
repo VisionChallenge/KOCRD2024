@@ -7,6 +7,18 @@ from kocrd.utils.file_utils import show_message_box_safe
 import importlib  # 모듈 동적 로딩을 위한 import
 from kocrd.config.config import load_config
 
+def load_config(config_path: str):
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Config file not found: {config_path}")
+    except json.JSONDecodeError:
+        logging.error(f"Invalid JSON format: {config_path}")
+    except Exception as e:
+        logging.error(f"Error loading config file: {config_path} - {e}")
+    return {}
+
 class ConfigLoader:
     def __init__(self, config_path: str):
         self.config = load_config(config_path)
@@ -72,7 +84,7 @@ class ConfigLoader:
                 return _get(data[key], keys[1:])
             return default
 
-        return _get(self.config_data, key_path.split("."))
+        return _get(self.config, key_path.split("."))
 
     def validate(self, key_path: str, validator: callable, message: str):
         value = self.get(key_path)

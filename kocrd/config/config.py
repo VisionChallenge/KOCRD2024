@@ -141,14 +141,20 @@ class SystemManager:
 
 import logging
 
-def handle_error(system_manager, event_name, message_id, error=None, **kwargs):
-    message = get_message(message_id, error=error, **kwargs)
+def handle_error(system_manager, category, code, exception, message=None):
+    error_message_key = f"{category}_{code}"
+    error_message = config.get_message(error_message_key)
+
     if message:
-        logging.error(message)
+        error_message += f" - {message}"
+
+    if exception:
+        logging.exception(error_message)
     else:
-        logging.error(f"Message with ID '{message_id}' not found.")
-    # 필요에 따라 system_manager를 사용하여 이벤트 트리거
-    # system_manager.trigger_event(event_name, {"error_message": str(message)})
+        logging.error(error_message)
+
+    if system_manager:
+        system_manager.handle_error(error_message, error_message_key)
 
 def get_message(message_id, error=None, **kwargs):
     # 메시지 ID에 따른 메시지 로딩 로직 구현

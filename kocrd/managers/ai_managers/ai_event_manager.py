@@ -1,12 +1,11 @@
-# kocrd/managers/ai_managers/ai_event_manager.py
 import logging
-from PIL import Image, UnidentifiedImageError  # PIL import 위치 변경
+from PIL import Image, UnidentifiedImageError
 
-from kocrd.config.config import config
+from kocrd.config.config import handle_error
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 from kocrd.User import FeedbackEventHandler
 from kocrd.config.message.message_handler import MessageHandler
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.config.loader import ConfigLoader
 
 class AIEventManager:
     def __init__(self, system_manager, settings_manager, model_manager, ai_data_manager, error_handler, queues):
@@ -19,39 +18,39 @@ class AIEventManager:
         self.ai_training_manager = AITrainingManager(model_manager, settings_manager, system_manager, ai_data_manager)
         self.feedback_event_handler = FeedbackEventHandler(ai_data_manager, error_handler)
         self.message_handler = MessageHandler()
-        self.config_loader = ConfigLoader("path/to/config.json")  # ConfigLoader 인스턴스 생성
+        self.config_loader = ConfigLoader("path/to/config.json")
 
     def handle_message(self, ch, method, properties, body):
-        self.config_loader.handle_message(self, ch, method, properties, body)  # config_loader.handle_message() 사용
+        self.config_loader.handle_message(self, ch, method, properties, body)
 
     def handle_ocr_request(self, file_path):
         try:
             extracted_text = self._perform_ocr(file_path)
             self.system_manager.trigger_event("ocr_completed", {"file_path": file_path, "extracted_text": extracted_text})
         except Exception as e:
-            self._handle_error("ocr_failed", "518", error=e, file_path=file_path)
+            handle_error(self.system_manager, "ocr_failed", "518", error=e, file_path=file_path)
 
     def _perform_ocr(self, file_path):
-        ocr_engine_type = self.config_loader.get("ui.settings.ocr_engine")  # config_loader.get() 사용
+        ocr_engine_type = self.config_loader.get("ui.settings.ocr_engine")
         try:
             ocr_engine = self.config_loader.create_ocr_engine(ocr_engine_type)
             image = Image.open(file_path)
             extracted_text = ocr_engine.perform_ocr(image)
             return extracted_text
         except ValueError as e:
-            self._handle_error("ocr_engine_error", "517", error=e) # 메시지 ID 사용
+            handle_error(self.system_manager, "ocr_engine_error", "517", error=e)
             raise
         except ImportError as e:
-            self._handle_error("ocr_engine_error", "401") # 메시지 ID 사용
+            handle_error(self.system_manager, "ocr_engine_error", "401")
             raise
         except FileNotFoundError as e:
-            self._handle_error("ocr_engine_error", "403") # 메시지 ID 사용
+            handle_error(self.system_manager, "ocr_engine_error", "403")
             raise
         except UnidentifiedImageError as e:
-            self._handle_error("ocr_engine_error", "502", page_num="알 수 없는 페이지") # 메시지 ID 사용
+            handle_error(self.system_manager, "ocr_engine_error", "502", page_num="알 수 없는 페이지")
             raise
         except Exception as e:
-            self._handle_error("ocr_engine_error", "518", error=e) # 메시지 ID 사용
+            handle_error(self.system_manager, "ocr_engine_error", "518", error=e)
             raise
 
     def handle_training_start(self, features, label):
@@ -75,7 +74,8 @@ class AIEventManager:
             self.system_manager.trigger_event("training_completed", {"model_path": model_save_path})
 
         except Exception as e:
-            self._handle_error("training_failed", f"훈련 중 오류 발생: {e}")
+            handle_error(self.system_manager, "training_failed", f"훈련 중 오류 발생: {e}")
+
     def handle_ocr_event(self, file_path, extracted_text):
         logging.info("Handling OCR completion event.")
         prediction_request = {
@@ -83,7 +83,8 @@ class AIEventManager:
             "data": {"text": extracted_text, "file_path": file_path},
             "reply_to": self.queues["events_queue"],
         }
-        self.config_loader.send_message_to_queue(self.queues["prediction_requests"], prediction_request)  # config_loader.send_message_to_queue() 사용
+        self.config_loader.send_message_to_queue(self.queues["prediction_requests"], prediction_request)
+
     def handle_hyperparameter_change(self, hyperparameters):
         try:
             self.ai_training_manager.apply_parameters(hyperparameters)
@@ -91,9 +92,9 @@ class AIEventManager:
             self.system_manager.trigger_event("hyperparameters_changed", hyperparameters)
 
         except (KeyError, ValueError) as e:
-            self._handle_error("hyperparameters_change_failed", f"하이퍼파라미터 변경 중 오류 발생: {e}")
+            handle_error(self.system_manager, "hyperparameters_change_failed", f"하이퍼파라미터 변경 중 오류 발생: {e}")
         except Exception as e:
-            self._handle_error("hyperparameters_change_failed", f"하이퍼파라미터 변경 중 오류 발생: {e}")
+            handle_error(self.system_manager, "hyperparameters_change_failed", f"하이퍼파라미터 변경 중 오류 발생: {e}")
 
     def handle_training_data_change(self, data_path):
         try:
@@ -104,14 +105,16 @@ class AIEventManager:
             self.system_manager.trigger_event("training_data_changed", data_path)
 
         except (FileNotFoundError, ValueError) as e:
-            self._handle_error("training_data_change_failed", f"훈련 데이터 변경 중 오류 발생: {e}")
+            handle_error(self.system_manager, "training_data_change_failed", f"훈련 데이터 변경 중 오류 발생: {e}")
         except Exception as e:
-            self._handle_error("training_data_change_failed", f"훈련 데이터 변경 중 오류 발생: {e}")
+            handle_error(self.system_manager, "training_data_change_failed", f"훈련 데이터 변경 중 오류 발생: {e}")
+
     def handle_model_save_request(self, source_path, destination_path):
         try:
-            config.file_manager.copy_file(source_path, destination_path)  # config.file_manager 사용
+            config.file_manager.copy_file(source_path, destination_path)
             logging.info(f"Model saved to {destination_path}")
         except Exception as e:
-            self._handle_error("model_save_failed", f"모델 저장 중 오류 발생: {e}")
+            handle_error(self.system_manager, "model_save_failed", f"모델 저장 중 오류 발생: {e}")
+
     def _handle_error(self, event_name, message_id, *args, **kwargs):
-        config.handle_error(self.system_manager, "error", message_id, None,  *args, **kwargs) # config.handle_error() 사용
+        handle_error(self.system_manager, event_name, message_id, None, *args, **kwargs)
