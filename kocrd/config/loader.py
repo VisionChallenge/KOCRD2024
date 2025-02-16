@@ -1,3 +1,4 @@
+# kocrd/config/loader.py
 import json
 import logging
 import os
@@ -50,21 +51,10 @@ class ConfigLoader:
                 log_function = getattr(logging, message_type.lower())
                 log_function(message)
             elif message_type == "OCR":
-                handler_instance.training_event_handler.handle_ocr_request(data.get("file_path"))
+                handler_instance.process_ocr_request(data.get("file_path"))
                 logging.info(message)
         except Exception as e:
             logging.error(f"Error handling {message_type} message: {message_id} - {e}")
-
-    def handle_message(self, manager, ch, method, properties, body):
-        try:
-            message = json.loads(body)
-            manager.process_message(message)
-        except json.JSONDecodeError as e:
-            logging.error(f"JSON 디코딩 오류: {e}. 메시지 내용: {body}")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-        except Exception as e:
-            logging.error(f"메시지 처리 오류: {e}")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     def load_and_merge(self, config_files: list):
         for file_path in config_files:
@@ -162,7 +152,7 @@ class ConfigLoader:
         for filename in os.listdir(lang_dir):
             if filename.endswith(".json"):
                 file_path = os.path.join(lang_dir, filename)
-                lang_pack = self._load_json(file_path)
+                lang_pack = self._load(file_path)
                 language_code = lang_pack.get("language_code")
                 if language_code:
                     self.language_packs[language_code] = lang_pack
@@ -171,7 +161,7 @@ class ConfigLoader:
         self.current_language = self._determine_language()
 
     def load_messages(self, message_file_path):
-        self.messages = self._load_json(message_file_path)
+        self.messages = self._load(message_file_path)
 
     def _determine_language(self):
         preferred_language = self.get("ui.language")
@@ -211,10 +201,6 @@ class ConfigLoader:
             logging.error(self.get_message("error.507", e=e))
             return False
 
-    def get_message(self, level: str, code: str) -> str:
-        """메시지 코드를 통해 메시지를 반환."""
-        return self.config["messages"][level].get(code, "")
-
     def initialize_database(self, engine):
         """SQLAlchemy를 사용하여 데이터베이스 테이블 생성."""
         try:
@@ -252,6 +238,7 @@ class ConfigLoader:
             result = conn.execute(query, params or {})
             return [dict(row) for row in result]
 
+# 외부 함수들
 def load_tensorflow_model(model_path):
     """TensorFlow 모델 로딩 함수."""
     try:
@@ -273,6 +260,7 @@ def load_gpt_model(gpt_model_path):
     except Exception as e:
         handle_error(None, "gpt_model_load_error", "505", error=e, model_path=gpt_model_path)
         return None, None
+
 def load_json(file_path: str):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -284,10 +272,9 @@ def load_json(file_path: str):
     except Exception as e:
         return {"error": "FILE_LOAD_ERROR", "message": f"Error loading file: {file_path} - {e}"}
 
-
 def handle_error(system_manager, category, code, exception, message=None):
     error_message_key = f"{category}_{code}"
-    error_message = config.get_message(error_message_key)
+    error_message = get_message(error_message_key)
 
     if message:
         error_message += f" - {message}"
@@ -299,3 +286,51 @@ def handle_error(system_manager, category, code, exception, message=None):
 
     if system_manager:
         system_manager.handle_error(error_message, error_message_key)
+
+def get_message(message_id, error=None, **kwargs):
+    # 메시지 ID에 따른 메시지 로딩 로직 구현
+    messages = {
+        "501": "KeyError 발생: {error}",
+        "505": "일반 오류 발생: {error}",
+        "512": "JSON 디코딩 오류: {error}",
+        "518": "OCR 엔진 오류: {error}",
+        # 추가 메시지 ID와 메시지 매핑
+    }
+    message = messages.get(message_id, "알 수 없는 오류 발생")
+    if error:
+        message = message.format(error=error, **kwargs)
+    return message
+
+def send_message_to_queue(system_manager, queue_name, message):
+    # 큐에 메시지 전송 로직 구현
+    pass
+
+def initialize_managers(self):
+    for manager_name, manager_config in config.managers.items():
+        module_path = manager_config["module"]
+        class_name = manager_config["class"]
+        dependencies = manager_config.get("dependencies", [])
+        kwargs = manager_config.get("kwargs", {})
+
+        dependencies_instances = [
+            self.managers[dep] for dep in dependencies
+        ]
+
+        try:
+            module = __import__(module_path, fromlist=[class_name])
+            manager_class = getattr(module, class_name)
+
+            self.managers[manager_name] = manager_class(
+                *dependencies_instances, **kwargs
+            )
+        except ImportError as e:
+            logging.error(f"Error importing module {module_path}: {e}")
+        except AttributeError as e:
+            logging.error(
+                f"Error getting class {class_name} from module {module_path}: {e}")
+        except Exception as e:
+            logging.error(
+                f"An unexpected error occurred during manager initialization: {e}")
+
+def get_manager(self, manager_name):
+    return self.managers.get(manager_name)
