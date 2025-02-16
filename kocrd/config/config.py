@@ -46,17 +46,19 @@ class UIConfig:
 class Config:
     def __init__(self, config_file):
         self.config_data = {}
-        self.config_loader = ConfigLoader()
+        self.config_loader = ConfigLoader(config_file) # ConfigLoader에 config_file 전달
         self.config_loader.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])
         self.temp_dir = self.get("file_paths.temp_files")
         self.backup_dir = os.path.join(self.temp_dir, "backup")
         os.makedirs(self.backup_dir, exist_ok=True)
         self.temp_files = []
-        self.file_manager = FileManager(self.temp_dir, self.backup_dir, self.temp_files)
+        self.file_manager = FileManager(self.temp_dir, self.backup_dir) # temp_files 제거
         self.rabbitmq = RabbitMQConfig(self)
         self.file_paths = FilePathConfig(self)
         self.ui = UIConfig(self)
         self.message_handler = MessageHandler(self.config_loader)
+        self.initialize_managers() # 매니저 초기화
+        self.managers = {} # 매니저 인스턴스 저장
     def get(self, key_path, default=None):
         return self.config_loader.get(key_path, default)
     def validate(self, key_path: str, validator: callable, message: str):
@@ -74,7 +76,7 @@ class Config:
     def get_managers(self):
         return self.get("managers")
     def get_message(self, message_id, *args, **kwargs):
-        return self.message_handler.get_message(message_id, *args, **kwargs)
+        return self.message_handler.get_message(message_id, *args, **kwargs) # MessageHandler의 get_message 호출
     def get_queue_name(self, queue_type):
         return self.config_loader.get_queue_name(queue_type)
     def get_database_url(self):
@@ -90,20 +92,23 @@ class Config:
         log_message = error_message.format(error=exception)
         logging.error(log_message)
         show_message_box_safe(error_message.format(error=exception), "오류")
+    def handle_message(self, ch, method, properties, body): # handler_instance 제거
+        return self.config_loader.handle_message(ch, method, properties, body)
+    def send_message(self, queue_name: str, message: dict): # send_message 이름 변경
+        return self.config_loader.send_message_to_queue(queue_name, message)
     def cleanup_all_temp_files(self, retention_time: int = 3600):
-        self.file_manager.cleanup_all_temp_files(retention_time) # file_manager 사용
+        self.file_manager.cleanup_all_temp_files(retention_time)
     def cleanup_specific_files(self, files: Optional[List[str]]):
-        self.file_manager.cleanup_specific_files(files) # file_manager 사용
+        self.file_manager.cleanup_specific_files(files)
     def get_setting(self, setting_path):
         return self.config_loader.get_setting(setting_path)
     def create_ocr_engine(self, engine_type: str):
         return self.config_loader.create_ocr_engine(engine_type)
     def create_ai_model(self, model_type: str):
         return self.config_loader.create_ai_model(model_type)
-    def send_message_to_queue(self, queue_name: str, message: dict):
-        return self.config_loader.send_message_to_queue(queue_name, message)
-    def handle_message(self, handler_instance, ch, method, properties, body):
-        return self.config_loader.handle_message(handler_instance, ch, method, properties, body)
+    def load_tensorflow_model(self, model_path):
+        return self.config_loader.load_tensorflow_model(model_path)
+    def load_gpt_model(self, gpt_model_path):
+        return self.config_loader.load_gpt_model(gpt_model_path)
 
-# config 인스턴스 생성 (기존 코드 유지)
 config = Config("config/development.json")

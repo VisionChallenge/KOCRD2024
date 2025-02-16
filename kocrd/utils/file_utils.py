@@ -35,11 +35,11 @@ class FileManager:
             logging.info(f"파일 복사 완료: {destination_path}")
             return destination_path
         except FileNotFoundError:
-            logging.error(f"파일을 찾을 수 없습니다: {source_path}") # config.get_message() 대신 logging.error 사용
-            raise # FileNotFoundError 다시 발생
+            logging.error(f"파일을 찾을 수 없습니다: {source_path}")
+            raise
         except OSError as e:
-            logging.error(f"파일 복사 오류: {e}")  # config.get_message() 대신 logging.error 사용
-            raise  # OSError 다시 발생
+            logging.error(f"파일 복사 오류: {e}")
+            raise
     def delete_file(self, file_path):
         try:
             os.remove(file_path)
@@ -51,25 +51,84 @@ class FileManager:
         except Exception as e:
             logging.error(f"파일 삭제 오류: {e}")
             return False
-    def read_file(self, file_path: str) -> Optional[str]:  # self 추가
+    def read_file(self, file_path: str, file_type: str = "auto") -> Optional[Any]:
+        if file_type == "auto":
+            file_type = self._determine_file_type(file_path)
+        if file_type == "json":
+            return self.read_json(file_path)
+        elif file_type == "text":
+            return self.read_text(file_path)
+        else:
+            logging.warning(f"Unsupported file type or extension: {file_path}")
+            return None
+
+    def read_file(self, file_path: str, file_type: str = "auto") -> Optional[Any]:
+        if file_type == "json" or (file_type == "auto" and file_path.endswith((".json", ".yaml", ".yml"))):
+            return self.read_json(file_path)
+        elif file_type == "text" or (file_type == "auto" and file_path.endswith(".txt")):
+            return self.read_text(file_path)
+        else:
+            logging.warning(f"Unsupported file type or extension: {file_path}")
+            return None
+    def write_file(self, file_path: str, content: Any, file_type: str = "auto") -> bool:
+        if file_type == "auto":
+            file_type = self._determine_file_type(file_path)  # 파일 타입 추론
+        if file_type == "json":
+            return self.write_json(file_path, content)
+        elif file_type == "text":
+            return self.write_text(file_path, content)
+        else:
+            logging.warning(f"Unsupported file type or extension: {file_path}")
+            return False
+    def _determine_file_type(self, file_path: str) -> str:
+        if file_path.endswith((".json", ".yaml", ".yml")):
+            return "json"
+        elif file_path.endswith(".txt"):
+            return "text"
+        return "unknown"  # or raise an exception
+
+    def move_file(self, source_path: str, destination_path: str) -> str:
         try:
-            encoding = self.detect_encoding(file_path)
-            with open(file_path, "r", encoding=encoding) as f:
-                return f.read()
+            shutil.move(source_path, destination_path)
+            logging.info(f"파일 이동 완료: {destination_path}")
+            return destination_path
         except FileNotFoundError:
-            logging.error(f"파일을 찾을 수 없습니다: {file_path}")
+            logging.error(f"파일을 찾을 수 없습니다: {source_path}")
             raise
         except OSError as e:
-            logging.error(f"파일 읽기 오류: {e}")
+            logging.error(f"파일 이동 오류: {e}")
             raise
-    def write_file(file_path: str, content: str, encoding: str = "utf-8") -> bool:
+    def read_json(self, file_path: str) -> Optional[dict]:
         try:
-            with open(file_path, "w", encoding=encoding) as f:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.error(f"Error loading JSON {file_path}: {e}")
+            return None
+    def read_text(self, file_path: str) -> Optional[str]:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except FileNotFoundError as e:
+            logging.error(f"Error loading text {file_path}: {e}")
+            return None
+    def write_text(self, file_path: str, content: str) -> bool:
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             return True
         except OSError as e:
-            logging.error(f"파일 쓰기 오류: {e}") # config.get_message() 대신 logging.error 사용
-            raise
+            logging.error(f"Error writing text {file_path}: {e}")
+            return False
+    def write_json(self, file_path: str, data: dict) -> bool:
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)  # ensure_ascii=False 추가
+            return True
+        except OSError as e:
+            logging.error(f"Error writing JSON {file_path}: {e}")
+            return False
+
     def cleanup_all_temp_files(self, retention_time: int = 3600):
         """임시 디렉토리의 모든 파일 정리 (보관 기간 적용)."""
         now = datetime.now().timestamp()

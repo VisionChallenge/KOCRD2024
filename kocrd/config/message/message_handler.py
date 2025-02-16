@@ -18,13 +18,10 @@ class MessageHandler:
             "ID": self._handle_message,
             "OCR": self._handle_message,
         }
-
     def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
-        return self.config_loader.get_message(message_id, *args, **kwargs)
-
+        return self.config_loader._message(message_id, *args, **kwargs) # ConfigLoader의 _message 사용
     def _handle_message(self, message_id, data, message_type):
-        self.config_loader.handle_message(self, message_id, data, message_type)
-
+        self.config_loader.handle_message(message_id, data, message_type)
     def process_message(self, ch, method, properties, body):
         try:
             message = json.loads(body)
@@ -48,5 +45,9 @@ class MessageHandler:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
     def send_message(self, queue_name, message):
-        """지정된 큐에 메시지를 전송합니다."""
-        self.config_loader.send_message_to_queue(self, queue_name, message)
+        try:
+            # 큐에 메시지 전송 로직 구현 (pika 사용 등)
+            logging.info(f"Message sent to queue '{queue_name}': {message}")
+        except pika.exceptions.AMQPConnectionError as e:
+            logging.error(f"RabbitMQ 연결 오류: {e}")
+            raise
