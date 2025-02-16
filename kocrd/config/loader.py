@@ -273,3 +273,29 @@ def load_gpt_model(gpt_model_path):
     except Exception as e:
         handle_error(None, "gpt_model_load_error", "505", error=e, model_path=gpt_model_path)
         return None, None
+def load_json(file_path: str):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"error": "FILE_NOT_FOUND", "message": f"File not found: {file_path}"}
+    except json.JSONDecodeError:
+        return {"error": "INVALID_JSON_FORMAT", "message": f"Invalid JSON format: {file_path}"}
+    except Exception as e:
+        return {"error": "FILE_LOAD_ERROR", "message": f"Error loading file: {file_path} - {e}"}
+
+
+def handle_error(system_manager, category, code, exception, message=None):
+    error_message_key = f"{category}_{code}"
+    error_message = config.get_message(error_message_key)
+
+    if message:
+        error_message += f" - {message}"
+
+    if exception:
+        logging.exception(error_message)
+    else:
+        logging.error(error_message)
+
+    if system_manager:
+        system_manager.handle_error(error_message, error_message_key)

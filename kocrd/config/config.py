@@ -14,17 +14,6 @@ def load_config(file_path: str) -> dict:
     """JSON 파일을 로드하여 딕셔너리로 반환."""
     return load_json_file(file_path)
 
-def load_json(file_path: str):
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"error": "FILE_NOT_FOUND", "message": f"File not found: {file_path}"}
-    except json.JSONDecodeError:
-        return {"error": "INVALID_JSON_FORMAT", "message": f"Invalid JSON format: {file_path}"}
-    except Exception as e:
-        return {"error": "FILE_LOAD_ERROR", "message": f"Error loading file: {file_path} - {e}"}
-
 def merge_configs(config1: dict, config2: dict) -> dict:
     merged = config1.copy()
     merged.update(config2)
@@ -155,21 +144,6 @@ class SystemManager:
         return self.managers.get(manager_name)
 
 import logging
-
-def handle_error(system_manager, category, code, exception, message=None):
-    error_message_key = f"{category}_{code}"
-    error_message = config.get_message(error_message_key)
-
-    if message:
-        error_message += f" - {message}"
-
-    if exception:
-        logging.exception(error_message)
-    else:
-        logging.error(error_message)
-
-    if system_manager:
-        system_manager.handle_error(error_message, error_message_key)
 
 def get_message(message_id, error=None, **kwargs):
     # 메시지 ID에 따른 메시지 로딩 로직 구현
