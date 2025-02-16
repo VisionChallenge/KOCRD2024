@@ -7,7 +7,7 @@ from typing import Callable, Dict, Any
 
 import pika.exceptions
 from kocrd.config.loader import ConfigLoader
-
+from kocrd.config.message.message_handler import MessageHandler
 from kocrd.managers.ai_managers.ai_model_manager import AIModelManager
 
 class AIOCRRunning:
@@ -17,6 +17,7 @@ class AIOCRRunning:
         self.ai_model_manager = AIModelManager.get_instance()
         self.rabbitmq_manager = self.ai_model_manager.rabbitmq_manager
         self.config_loader = ConfigLoader("path/to/config.json")
+        self.message_handler = MessageHandler(self.config_loader)
 
     def create_ai_request(self, message_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -27,7 +28,7 @@ class AIOCRRunning:
 
     def handle_ocr_result(self, ch, method, properties, body):
         """OCR 결과 메시지 처리."""
-        self.config_loader.handle_message(self, ch, method, properties, body)
+        self.message_handler._handle_message(self, ch, method, properties, body)
         try:
             message = json.loads(body)
             self.config_loader.send_message_to_queue("events_queue", message)

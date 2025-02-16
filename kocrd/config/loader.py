@@ -63,6 +63,7 @@ class ConfigLoader:
         except pika.exceptions.AMQPConnectionError as e:
             logging.error(f"RabbitMQ 연결 오류: {e}")
             raise
+
     def _process_ocr_request(self, message, data):
         file_path = data.get("file_path")
         logging.info(message)
@@ -176,22 +177,23 @@ class ConfigLoader:
         except Exception as e:
             self.handle_error("gpt_model_load_error", "505", exception=e, message=f"GPT 모델 로드 실패: {gpt_model_path}")
             return None, None
-    def initialize_managers(self):
-        for manager_name, manager_config in self.get_managers().items():
+    def initialize_managers(self, system_manager):
+        managers_config = self.get_managers()
+        for manager_name, manager_config in managers_config.items():
             module_path = manager_config["module"]
             class_name = manager_config["class"]
             dependencies = manager_config.get("dependencies", [])
             kwargs = manager_config.get("kwargs", {})
 
             dependencies_instances = [
-                self.managers[dep] for dep in dependencies
+                system_manager.managers[dep] for dep in dependencies
             ]
 
             try:
                 module = __import__(module_path, fromlist=[class_name])
                 manager_class = getattr(module, class_name)
 
-                self.managers[manager_name] = manager_class(
+                system_manager.managers[manager_name] = manager_class(
                     *dependencies_instances, **kwargs
                 )
             except ImportError as e:
@@ -200,6 +202,25 @@ class ConfigLoader:
                 logging.error(self._message("error.attribute_error", class_name=class_name, module=module_path, error=e))
             except Exception as e:
                 logging.error(self._message("error.manager_init_error", error=e))
+
+    def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
+        """AI 모델 실행 프로세스 트리거"""
+        manager = self.get_manager(process_type)
+        if manager:
+            manager.handle_process(data)
+        elif process_type == "database_packaging":
+            self.get_manager("temp_file").database_packaging()
+        elif process_type == "ai_training":
+            self.get_manager("ai_training").request_ai_training(data)
+        elif process_type == "generate_text":
+            ai_manager = self.get_manager("ai_prediction")
+            if ai_manager:
+                return ai_manager.generate_text(data.get("command", ""))
+            else:
+                logging.error("AIManager가 초기화되지 않았습니다.")
+        else:
+            logging.warning(f"🔴 알 수 없는 프로세스 유형: {process_type}")
+            QMessageBox.warning(self.main_window, "오류", "알 수 없는 작업 유형입니다.")
 
     def handle_error(self, category, code, exception, additional_message=None):
         message_id = f"{category}_{code}"

@@ -1,9 +1,11 @@
 import logging
+import re
 from typing import Dict, Any, List, Optional
 import os
 from kocrd.config.loader import ConfigLoader
 from kocrd.config.message.message_handler import MessageHandler
 from kocrd.utils.file_utils import FileManager, show_message_box_safe
+from kocrd.managers.temp_file_manager import TempFileManager
 
 class RabbitMQConfig:
     def __init__(self, config_loader: ConfigLoader):
@@ -40,7 +42,8 @@ class Config:
         self.ui = UIConfig(self.config_loader)
         self.managers = {}
         self.initialize_managers()
-
+        self.temp_file_manager = TempFileManager(self.file_manager)
+        
     def get(self, key_path, default=None):
         return self.config_loader.get(key_path, default)
     def validate(self, key_path: str, validator: callable, message: str):
@@ -50,13 +53,7 @@ class Config:
         return self.message_handler.get_message(message_id, *args, **kwargs)
 
     def handle_document_exception(self, parent, category, code, exception, additional_message=None):
-        message_id = f"{category}_{code}"
-        error_message = self.get_message(message_id)
-        if additional_message:
-            error_message += f" - {additional_message}"
-        log_message = error_message.format(error=exception)
-        logging.error(log_message)
-        show_message_box_safe(error_message.format(error=exception), "오류")
+        return self.config_loader.handle_document_exception(parent, category, code, exception, additional_message)
 
     def handle_message(self, ch, method, properties, body):
         return self.config_loader.handle_message(ch, method, properties, body)
@@ -65,10 +62,10 @@ class Config:
         return self.config_loader.send_message_to_queue(queue_name, message)
 
     def cleanup_all_temp_files(self, retention_time: int = 3600):
-        self.file_manager.cleanup_all_temp_files(retention_time)
+        return self.temp_file_manager.cleanup_all_temp_files(retention_time)
 
     def cleanup_specific_files(self, files: Optional[List[str]]):
-        self.file_manager.cleanup_specific_files(files)
+        return self.temp_file_manager.cleanup_specific_files(files)
 
     def get_setting(self, setting_path):
         return self.config_loader.get_setting(setting_path)

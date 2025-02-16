@@ -5,7 +5,7 @@ import os
 from sklearn.model_selection import train_test_split
 from PyQt5.QtWidgets import QMessageBox
 
-from kocrd.config.config import handle_error
+from kocrd.config.config import config
 from kocrd.config.loader import ConfigLoader
 
 class AITrainingManager:
@@ -16,6 +16,10 @@ class AITrainingManager:
         self.ai_data_manager = ai_data_manager
         self.document_embedding_path = self.settings_manager.get_setting("document_embedding_path")
         self.config_loader = ConfigLoader("path/to/config.json")
+        self.config = config  # Config 객체를 사용하도록 변경
+
+    def _handle_error(self, event_name, message_id, *args, **kwargs):
+        config.handle_error(event_name, message_id, None, *args, **kwargs)
 
     def prepare_training_data(self, data, features, label):
         try:
@@ -23,10 +27,10 @@ class AITrainingManager:
             y = data[label]
             return train_test_split(X, y, test_size=0.2)
         except KeyError as e:
-            handle_error(self.system_manager, "error", "501", error=e)
+            self._handle_error("error", "501", error=e)
             return None, None, None, None
         except Exception as e:
-            handle_error(self.system_manager, "error", "505", error=e)
+            self._handle_error("error", "505", error=e)
             return None, None, None, None
 
     def train_model(self, data, features, label):
@@ -51,10 +55,10 @@ class AITrainingManager:
 
             return result
         except ValueError as e:
-            handle_error(self.system_manager, "error", "05", error=e)
+            self._handle_error("error", "05", error=e)
             return None
         except Exception as e:
-            handle_error(self.system_manager, "error", "05", error=e)
+            self._handle_error("error", "05", error=e)
             return None
 
     def apply_parameters(self, parameters):
@@ -63,7 +67,7 @@ class AITrainingManager:
             self.model_manager.apply_parameters(parameters)
             logging.info("Parameters applied successfully.")
         except Exception as e:
-            handle_error(self.system_manager, "error", "05", error=e)
+            self._handle_error("error", "05", error=e)
 
     def train_with_parameters(self, file_path, features, label):
         """사용자가 제공한 파라미터 파일로 모델을 학습."""
@@ -77,8 +81,8 @@ class AITrainingManager:
             logging.info("Model training completed with provided parameters.")
             QMessageBox.information(None, "학습 완료", "모델 학습이 성공적으로 완료되었습니다.")
         except json.JSONDecodeError as e:
-            handle_error(self.system_manager, "error", "512", error=e)
+            self._handle_error("error", "512", error=e)
         except FileNotFoundError as e:
-            handle_error(self.system_manager, "error", "505", error=e)
+            self._handle_error("error", "505", error=e)
         except Exception as e:
-            handle_error(self.system_manager, "error", "505", error=e)
+            self._handle_error("error", "505", error=e)
