@@ -1,7 +1,7 @@
 # kocrd/config/loader.py
 import logging
 import os
-from typing import Callable, Dict, Optional, Any
+from typing import Callable, Dict, Optional, Any, List
 from kocrd.utils.file_utils import FileManager, show_message_box_safe
 from kocrd.config.config import Config, load_config, merge_configs, get_temp_dir
 from sqlalchemy.exc import SQLAlchemyError
@@ -66,14 +66,14 @@ class ConfigLoader:
     def _process_ocr_request(self, message, data):
         file_path = data.get("file_path")
         logging.info(message)
-    def load_and_merge(self, config_files: list):
+    def load_and_merge(self, config_files: List[str]):
         for file_path in config_files:
             config_data = self.file_manager.read_json(file_path)
             if config_data is None:
                 continue
             self.config_data = merge_configs(self.config_data, config_data)
 
-    def get(self, key_path: str, default=None):
+    def get(self, key_path, default=None):
         def _get(data, keys):
             if not keys:
                 return data
@@ -200,6 +200,15 @@ class ConfigLoader:
                 logging.error(self._message("error.attribute_error", class_name=class_name, module=module_path, error=e))
             except Exception as e:
                 logging.error(self._message("error.manager_init_error", error=e))
+
+    def handle_error(self, category, code, exception, additional_message=None):
+        message_id = f"{category}_{code}"
+        error_message = self.get_message(message_id)
+        if additional_message:
+            error_message += f" - {additional_message}"
+        log_message = error_message.format(error=exception)
+        logging.error(log_message)
+        show_message_box_safe(error_message.format(error=exception), "오류")
 
 def get_message(message_id, error=None, **kwargs): # 전역 메시지 함수
     messages = {

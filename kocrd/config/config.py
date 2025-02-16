@@ -87,4 +87,7 @@ class Config:
     def initialize_managers(self):
         self.config_loader.initialize_managers()
 
+    def handle_error(self, category, code, exception, additional_message=None):
+        return self.config_loader.handle_error(category, code, exception, additional_message)
+
 config = Config("config/development.json")

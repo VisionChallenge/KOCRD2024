@@ -20,6 +20,7 @@ class MessageHandler:
         }
 
     def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
+        # 메시지 ID에 해당하는 메시지를 반환합니다.
         return self.config_loader._message(message_id, *args, **kwargs) # ConfigLoader의 _message 사용
     def _handle_message(self, message_id, data, message_type):
         self.config_loader.handle_message(message_id, data, message_type)
