@@ -15,6 +15,7 @@ class FileManager:
         self.temp_dir = temp_dir
         self.backup_dir = backup_dir
         self.temp_files = temp_files
+
     def create_temp_file(self, content, suffix=".tmp"):
         try:
             with tempfile.NamedTemporaryFile(mode="w+", suffix=suffix, dir=self.temp_dir, delete=False) as temp_file:
@@ -62,14 +63,6 @@ class FileManager:
             logging.warning(f"Unsupported file type or extension: {file_path}")
             return None
 
-    def read_file(self, file_path: str, file_type: str = "auto") -> Optional[Any]:
-        if file_type == "json" or (file_type == "auto" and file_path.endswith((".json", ".yaml", ".yml"))):
-            return self.read_json(file_path)
-        elif file_type == "text" or (file_type == "auto" and file_path.endswith(".txt")):
-            return self.read_text(file_path)
-        else:
-            logging.warning(f"Unsupported file type or extension: {file_path}")
-            return None
     def write_file(self, file_path: str, content: Any, file_type: str = "auto") -> bool:
         if file_type == "auto":
             file_type = self._determine_file_type(file_path)  # 파일 타입 추론
@@ -98,6 +91,7 @@ class FileManager:
         except OSError as e:
             logging.error(f"파일 이동 오류: {e}")
             raise
+
     def read_json(self, file_path: str) -> Optional[dict]:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -105,6 +99,7 @@ class FileManager:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Error loading JSON {file_path}: {e}")
             return None
+
     def read_text(self, file_path: str) -> Optional[str]:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -134,12 +129,12 @@ class FileManager:
         now = datetime.now().timestamp()
         for filename in os.listdir(self.temp_dir):
             file_path = os.path.join(self.temp_dir, filename)
-            if self.file_exists(file_path): # self.file_exists()
+            if self.file_exists(file_path):
                 try:
                     file_stat = os.stat(file_path)
                     file_time = file_stat.st_mtime
                     if now - file_time > retention_time:
-                        self.delete_file(file_path) # self.delete_file()
+                        self.delete_file(file_path)
                         logging.info(f"임시 파일 삭제: {file_path}")
                 except Exception as e:
                     logging.error(f"임시 파일 삭제 중 오류: {e}")
@@ -147,9 +142,9 @@ class FileManager:
         """특정 파일들을 정리합니다."""
         if files:
             for file_path in files:
-                if self.file_exists(file_path): # self.file_exists()
+                if self.file_exists(file_path):
                     try:
-                        self.delete_file(file_path) # self.delete_file()
+                        self.delete_file(file_path)
                         logging.info(f"특정 파일 삭제: {file_path}")
                     except Exception as e:
                         logging.error(f"특정 파일 삭제 중 오류: {e}")
@@ -159,8 +154,8 @@ class FileManager:
                 file_path = os.path.join(self.temp_dir, filename)
                 backup_path = os.path.join(self.backup_dir, filename)
                 if os.path.isfile(file_path):
-                    try:  # copy_file에서 발생할 수 있는 예외 처리
-                        self.copy_file(file_path, backup_path) # self.copy_file()
+                    try:
+                        self.copy_file(file_path, backup_path)
                     except Exception as e:
                         logging.error(f"백업 중 오류: {e}")
                         return False
@@ -175,8 +170,8 @@ class FileManager:
                 file_path = os.path.join(self.backup_dir, filename)
                 restore_path = os.path.join(self.temp_dir, filename)
                 if os.path.isfile(file_path):
-                    try:  # copy_file에서 발생할 수 있는 예외 처리
-                        self.copy_file(file_path, restore_path) # self.copy_file()
+                    try:
+                        self.copy_file(file_path, restore_path)
                     except Exception as e:
                         logging.error(f"복원 중 오류: {e}")
                         return False
@@ -207,14 +202,16 @@ class FileManager:
             logging.info(f"Detected encoding: {encoding} (Confidence: {confidence})")
             return encoding
         except FileNotFoundError:
-            logging.error(f"파일을 찾을 수 없습니다: {file_path}") # config.get_message() 대신 logging.error 사용
+            logging.error(f"파일을 찾을 수 없습니다: {file_path}")
             raise
         except OSError as e:
-            logging.error(f"파일 읽기 오류: {e}") # config.get_message() 대신 logging.error 사용
+            logging.error(f"파일 읽기 오류: {e}")
             raise
+
     def file_exists(self, file_path: str) -> bool:
         """파일이 존재하는지 확인합니다."""
         return os.path.isfile(file_path)
+
 def show_message_box_safe(message: str, title: str = "오류", icon: Any = None) -> None:
     """안전하게 메시지 박스를 표시합니다. PyQt5가 설치되어 있지 않으면 로깅합니다."""
     try:

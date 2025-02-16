@@ -16,7 +16,6 @@ class ConfigLoader:
         self.config_data = {}
         self.language_packs = {}
         self.current_language = "en"
-        self.managers = {}
         self.file_manager = FileManager(get_temp_dir(), self.config.get("backup_dir"), [])
         self.load_language_packs("kocrd/config/language")
         self.load_messages("kocrd/config/message/messages.json")

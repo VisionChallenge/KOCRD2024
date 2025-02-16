@@ -1,4 +1,3 @@
-# kocrd/config/config.py
 import logging
 from typing import Dict, Any, List, Optional
 import os
@@ -29,17 +28,16 @@ class UIConfig:
 
 class Config:
     def __init__(self, config_file):
-        self.config_data = {}
-        self.config_loader = ConfigLoader(config_file) # ConfigLoader에 config_file 전달
+        self.config_loader = ConfigLoader(config_file)  # ConfigLoader에 config_file 전달
         self.config_loader.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])
         self.temp_dir = self.config_loader.get("file_paths.temp_files")
         self.backup_dir = os.path.join(self.temp_dir, "backup")
         os.makedirs(self.backup_dir, exist_ok=True)
         self.file_manager = FileManager(self.temp_dir, self.backup_dir, [])
+        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 초기화
         self.rabbitmq = RabbitMQConfig(self.config_loader)
         self.file_paths = FilePathConfig(self.config_loader)
         self.ui = UIConfig(self.config_loader)
-        self.message_handler = MessageHandler(self.config_loader)
         self.managers = {}
         self.initialize_managers()
 

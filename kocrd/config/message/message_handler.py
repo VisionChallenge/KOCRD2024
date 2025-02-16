@@ -18,6 +18,7 @@ class MessageHandler:
             "ID": self._handle_message,
             "OCR": self._handle_message,
         }
+
     def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
         return self.config_loader._message(message_id, *args, **kwargs) # ConfigLoader의 _message 사용
     def _handle_message(self, message_id, data, message_type):
