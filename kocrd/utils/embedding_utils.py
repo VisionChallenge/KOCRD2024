@@ -82,3 +82,16 @@ class EmbeddingUtils:
             logging.error("SettingsManager가 초기화되지 않았습니다. config 파일을 확인해주세요.")
         except Exception as e:
             logging.exception(f"임베딩 생성 작업 중 오류 발생: {e}")
+
+def generate_document_type_embeddings(document_types_path: str) -> dict:
+    try:
+        with open(document_types_path, "r", encoding="utf-8") as f:
+            document_types = json.load(f)
+        embeddings = {}
+        for doc_type, text in document_types.items():
+            # 임베딩 생성 로직 (예: 임의의 벡터 생성)
+            embeddings[doc_type] = np.random.rand(768).tolist()
+        return embeddings
+    except Exception as e:
+        logging.error(f"Error generating document type embeddings: {e}")
+        return {}

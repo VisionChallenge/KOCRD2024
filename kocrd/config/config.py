@@ -84,10 +84,16 @@ class Config:
     def load_gpt_model(self, gpt_model_path):
         return self.config_loader.load_gpt_model(gpt_model_path)
 
-    def initialize_managers(self):
-        self.config_loader.initialize_managers()
+    def initialize_managers(self, system_manager):
+        return self.config_loader.initialize_managers(system_manager)
+
+    def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
+        return self.config_loader.trigger_process(process_type, data)
 
     def handle_error(self, category, code, exception, additional_message=None):
         return self.config_loader.handle_error(category, code, exception, additional_message)
+
+    def send_message_to_queue(self, queue_name: str, message: dict):
+        return self.config_loader.send_message_to_queue(queue_name, message)
 
 config = Config("config/development.json")

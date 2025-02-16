@@ -7,8 +7,7 @@ from datetime import datetime
 from PyQt5.QtWidgets import QInputDialog
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from ai_model_manager import AIModelManager
-from config.config import get_message, handle_error, send_message_to_queue
+from config.config import config
 from utils.embedding_utils import generate_document_type_embeddings
 
 class AIDataManager:
@@ -18,7 +17,6 @@ class AIDataManager:
         self.model_manager = model_manager
         self.settings_manager = settings_manager
         self.system_manager = system_manager
-        self.model_manager.set_ai_data_manager(self)  # AIModelManager에 AIDataManager 설정
         self.document_embedding_path = self.settings_manager.get("document_embedding_path")
         self.document_types_path = self.settings_manager.get("document_types_path")
         self.use_ml_model = False
@@ -33,7 +31,7 @@ class AIDataManager:
         try:
             self.database_manager.save_feedback(data)
             logging.info(f"피드백 저장 완료: {data}")
-            send_message_to_queue(self.system_manager, "feedback_queue", data)
+            self.config.send_message_to_queue("feedback_queue", data)
         except Exception as e:
             self.config.handle_error("error", "505", e, "피드백 저장 오류")
 

@@ -21,7 +21,7 @@ from kocrd.config.message.message_handler import MessageHandler
 from kocrd.managers.rabbitmq_manager import RabbitMQManager
 from kocrd.Settings.settings_manager import SettingsManager # SettingsManager import 유지
 from kocrd.utils.embedding_utils import EmbeddingUtils # EmbeddingUtils import 유지
-from kocrd.handlers.training_event_handler import TrainingEventHandler
+from kocrd.config.config import Config  # Config import 추가
 
 class SystemManager:
     def __init__(self, config_files: list, main_window=None):
@@ -33,44 +33,20 @@ class SystemManager:
         self.message_handler = MessageHandler(self.config_loader)
         self.rabbitmq_manager = RabbitMQManager(self.config_loader)
         self.ai_model_manager = AIModelManager.get_instance()
-        self.training_event_handler = TrainingEventHandler(self, self.ai_model_manager)
-        self._initialize_managers()
-        self.config = self.config_loader
-
-    def _initialize_managers(self):
-        managers_config = self.config_loader.get_managers()
-        for manager_name, manager_config in managers_config.items():
-            self.managers[manager_name] = self.manager_factory.create_manager(manager_name, manager_config)
+        self.training_event_handler = (self, self.ai_model_manager)
+        self.config = Config(config_files)  # ConfigLoader 대신 Config 사용
+        self.config.initialize_managers(self)  # Config에서 매니저 초기화
 
     def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
         """AI 모델 실행 프로세스 트리거"""
-        manager = self.get_manager(process_type)
-        if manager:
-            manager.handle_process(data)
-        elif process_type == "database_packaging":
-            self.get_manager("temp_file").database_packaging()
-        elif process_type == "ai_training":
-            self.get_manager("ai_training").request_ai_training(data)
-        elif process_type == "generate_text":
-            ai_manager = self.get_manager("ai_prediction")
-            if ai_manager:
-                return ai_manager.generate_text(data.get("command", ""))
-            else:
-                logging.error("AIManager가 초기화되지 않았습니다.")
-        else:
-            logging.warning(f"🔴 알 수 없는 프로세스 유형: {process_type}")
-            QMessageBox.warning(self.main_window, "오류", "알 수 없는 작업 유형입니다.")
+        return self.config.trigger_process(process_type, data)  # Config로 위임
 
     def handle_message(self, ch, method, properties, body):
         """RabbitMQ 메시지를 처리합니다."""
-        self.message_handler.handle_message(ch, method, properties, body, self)
+        self.config.handle_message(ch, method, properties, body)  # Config로 위임
 
     def handle_error(self, message, error_message_key=None):
-        if error_message_key:
-            logging.error(f"{message} (Error Key: {error_message_key})")
-        else:
-            logging.error(message)
-        QMessageBox.critical(self.main_window, "Error", message)
+        self.config.handle_error("system", "error", message, error_message_key)  # Config로 위임
 
     def run_embedding_generation(self):
         EmbeddingUtils.run_embedding_generation(self.config_loader)
