@@ -8,24 +8,11 @@ from typing import Dict, Any, List, Optional
 from kocrd.User import FeedbackEventHandler
 from kocrd.config.loader import ConfigLoader, load_json, merge_configs, get_temp_dir
 from kocrd.config.message.message_handler import MessageHandler
-from kocrd.utils.file_utils import FileManager, show_message_box_safe
+from kocrd.utils.file_utils import FileManager, show_message_box_safe, load_json_file
 
 def load_config(file_path: str) -> dict:
     """JSON 파일을 로드하여 딕셔너리로 반환."""
-    with open(file_path, 'r') as f:
-        return json.load(f)
-
-def load_config(config_path: str):
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logging.error(f"Config file not found: {config_path}")
-    except json.JSONDecodeError:
-        logging.error(f"Invalid JSON format: {config_path}")
-    except Exception as e:
-        logging.error(f"Error loading config file: {config_path} - {e}")
-    return {}
+    return load_json_file(file_path)
 
 def load_json(file_path: str):
     try:

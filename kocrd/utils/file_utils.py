@@ -8,6 +8,7 @@ from datetime import datetime
 import os
 import tempfile
 from kocrd.config.config import config
+import json
 
 class FileManager:
     def __init__(self, temp_dir, backup_dir, temp_files):
@@ -165,3 +166,17 @@ def show_message_box_safe(message: str, title: str = "오류", icon: Any = None)
     except ImportError:
         logging.warning("PyQt5가 설치되어 있지 않아 메시지 박스를 표시할 수 없습니다.")
         logging.error(message)
+
+def load_json_file(file_path: str) -> dict:
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"File not found: {file_path}")
+        return {}
+    except json.JSONDecodeError:
+        logging.error(f"Invalid JSON format: {file_path}")
+        return {}
+    except Exception as e:
+        logging.error(f"Error loading file: {file_path} - {e}")
+        return {}

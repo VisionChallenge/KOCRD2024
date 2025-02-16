@@ -1,11 +1,16 @@
-# kocrd/config/loader.py
 import json
 import logging
 import os
+import shutil  # 추가
 from typing import Callable, Dict, Optional, Any
 from kocrd.utils.file_utils import show_message_box_safe
 import importlib  # 모듈 동적 로딩을 위한 import
 from kocrd.config.config import load_config, load_json, merge_configs, get_temp_dir
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import text  # 추가
+import pika
+import tensorflow as tf  # 추가
+from transformers import GPT2Tokenizer, GPT2LMHeadModel  # 추가
 
 class ConfigLoader:
     def __init__(self, config_path: str):
@@ -30,9 +35,25 @@ class ConfigLoader:
         # 모델 생성 로직 구현
         pass
 
-    def send_message_to_queue(self, queue_name, message):
-        # 큐에 메시지 전송 로직 구현
-        pass
+    def send_message_to_queue(self, handler_instance, queue_name, message):
+        try:
+            # 큐에 메시지 전송 로직 구현
+            logging.info(f"Message sent to queue '{queue_name}': {message}")
+        except pika.exceptions.AMQPConnectionError as e:
+            logging.error(f"RabbitMQ 연결 오류: {e}")
+            raise
+
+    def handle_message(self, handler_instance, message_id, data, message_type):
+        try:
+            message = handler_instance.get_message(message_id, **data)
+            if message_type in ["LOG", "WARN", "ERR", "ID", "MSG"]:
+                log_function = getattr(logging, message_type.lower())
+                log_function(message)
+            elif message_type == "OCR":
+                handler_instance.training_event_handler.handle_ocr_request(data.get("file_path"))
+                logging.info(message)
+        except Exception as e:
+            logging.error(f"Error handling {message_type} message: {message_id} - {e}")
 
     def handle_message(self, manager, ch, method, properties, body):
         try:
@@ -206,6 +227,30 @@ class ConfigLoader:
         except (SQLAlchemyError, IOError, KeyError) as e:
             logging.error(f"Error initializing database: {e}")
             raise RuntimeError("Database initialization failed.") from e
+
+    def handle_db_exception(self, func):
+        """데이터베이스 예외 처리를 위한 데코레이터."""
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except SQLAlchemyError as e:
+                logging.error(f"Database error: {e}")
+                raise
+        return wrapper
+
+    @handle_db_exception
+    def execute_and_log(self, engine, query, params, success_message):
+        """쿼리를 실행하고 성공 메시지를 로깅합니다."""
+        with engine.connect() as conn:
+            conn.execute(query, params)
+        logging.info(success_message)
+
+    @handle_db_exception
+    def execute_and_fetch(self, engine, query, error_message, params=None):
+        """쿼리를 실행하고 결과를 반환합니다."""
+        with engine.connect() as conn:
+            result = conn.execute(query, params or {})
+            return [dict(row) for row in result]
 
 def load_tensorflow_model(model_path):
     """TensorFlow 모델 로딩 함수."""

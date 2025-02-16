@@ -23,16 +23,7 @@ class MessageHandler:
         return self.config_loader.get_message(message_id, *args, **kwargs)
 
     def _handle_message(self, message_id, data, message_type):
-        try:
-            message = self.get_message(message_id, **data)
-            if message_type in ["LOG", "WARN", "ERR", "ID", "MSG"]:
-                log_function = getattr(logging, message_type.lower())
-                log_function(message)
-            elif message_type == "OCR":
-                self.training_event_handler.handle_ocr_request(data.get("file_path"))
-                logging.info(message)
-        except Exception as e:
-            logging.error(f"Error handling {message_type} message: {message_id} - {e}")
+        self.config_loader.handle_message(self, message_id, data, message_type)
 
     def process_message(self, ch, method, properties, body):
         try:
@@ -58,9 +49,4 @@ class MessageHandler:
 
     def send_message(self, queue_name, message):
         """지정된 큐에 메시지를 전송합니다."""
-        try:
-            send_message_to_queue(self, queue_name, message)
-            logging.info(f"Message sent to queue '{queue_name}': {message}")
-        except pika.exceptions.AMQPConnectionError as e:
-            logging.error(f"RabbitMQ 연결 오류: {e}")
-            raise
+        self.config_loader.send_message_to_queue(self, queue_name, message)
