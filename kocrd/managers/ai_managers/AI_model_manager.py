@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict, Any
 import tensorflow as tf
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
-from kocrd.config.config import handle_error
+from kocrd.config.config import config
 from kocrd.managers.database_manager import DatabaseManager
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 from kocrd.config.message.message_handler import MessageHandler
@@ -36,6 +36,10 @@ class AIModelManager:
         self.ai_training_manager = ai_training_manager
         self.message_handler = MessageHandler()
         self._load_models()
+        self.config = config  # Config 객체를 사용하도록 변경
+
+    def _handle_error(self, event_name, message_id, *args, **kwargs):
+        config.handle_error(event_name, message_id, None, *args, **kwargs)
 
     def _load_models(self):
         self.model = self.config_loader.load_tensorflow_model(self.model_path)
@@ -47,7 +51,7 @@ class AIModelManager:
             self.train_ai(features, label)
             logging.info("AI 학습 완료")
         except Exception as e:
-            self.config_loader.handle_error(self.system_manager, "ai_training_error", "505", error=e)
+            self.config_loader.handle_error(self. "ai_training_error", "505", error=e)
             raise
 
     def train_ai(self, features, label):
@@ -68,7 +72,7 @@ class AIModelManager:
             self.ai_training_manager.train_model(self.model, data, features, label)
 
         except Exception as e:
-            handle_error(self.system_manager, "ai_model_training_error", "505", error=e)
+            self.config_loader.handle_error(self. "ai_model_training_error", "505", error=e)
             raise
 
     def generate_text(self, command: str) -> Optional[str]:
@@ -97,7 +101,7 @@ class AIModelManager:
             self.database_manager.save_text(file_name, text)
             logging.info(f"Generated text saved to database: {file_name}")
         except Exception as e:
-            handle_error(self.system_manager, "text_save_error", "505", error=e)
+            self.config_loader.handle_error(self.system_manager, "text_save_error", "505", error=e)
             raise
 
     def save_model(self, save_path: str) -> None:
@@ -108,7 +112,7 @@ class AIModelManager:
             self.model.save(save_path)
             logging.info(f"모델 저장 완료: {save_path}")
         except Exception as e:
-            handle_error(self.system_manager, "model_save_error", "505", error=e)
+            self.config_loader.handle_error(self.system_manager, "model_save_error", "505", error=e)
             raise
 
     def apply_trained_model(self, model_path: str) -> None:
@@ -118,8 +122,8 @@ class AIModelManager:
             self.model = tf.keras.models.load_model(model_path)
             logging.info("모델 로딩 완료")
         except FileNotFoundError as e:
-            handle_error(self.system_manager, "model_file_error", "505", error=e, model_path=model_path)
+            self.config_loader.handle_error(self.system_manager, "model_file_error", "505", error=e, model_path=model_path)
             raise
         except Exception as e:
-            handle_error(self.system_manager, "model_apply_error", "505", error=e)
+            self.config_loader.handle_error(self.system_manager, "model_apply_error", "505", error=e)
             raise

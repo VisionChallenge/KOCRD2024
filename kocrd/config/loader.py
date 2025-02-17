@@ -102,7 +102,9 @@ class ConfigLoader:
         self.current_language = self._determine_language()
     def load_messages(self, message_file_path):
         self.messages = self.file_manager.read_json(message_file_path)
+    def get_setting
 
+    
     def _determine_language(self):
         preferred_language = self.get("ui.language")
         if preferred_language and preferred_language in self.language_packs:
@@ -230,6 +232,16 @@ class ConfigLoader:
         log_message = error_message.format(error=exception)
         logging.error(log_message)
         show_message_box_safe(error_message.format(error=exception), "오류")
+
+    def handle_document_exception(self, parent, category, code, exception, additional_message=None):
+        message_id = f"{category}_{code}"
+        error_message = self.get_message(message_id)
+        if additional_message:
+            error_message += f" - {additional_message}"
+        log_message = error_message.format(error=exception)
+        logging.error(log_message)
+        show_message_box_safe(error_message.format(error=exception), "오류")
+        return log_message
 
 def get_message(message_id, error=None, **kwargs): # 전역 메시지 함수
     messages = {
