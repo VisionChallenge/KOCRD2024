@@ -15,11 +15,14 @@
 #    │   ├── document_controller.py  # 문서 컨트롤러
 #    │   ├── embedding_utils.py  # 접근 유틸리티 함수들
 #    │   ├── file_utils.py     # 파일 유틸리티 함수들
+#    │   ├── 
 #    │   ├── ui.py   #UI
 #    │   │   ├── class settings_ui  # 설정 다이얼로그 UI
 #    │   │   └── class main_window # 메인 윈도우 UI 및 로직
 #    │   └── ui/ 
-#    │	  	 ├── menubar_manager.py    # 메뉴바 관리
+#    │	     ├── settingsdialog_ui.py  # 설정 다이얼로그 UI
+#    │	     ├── menubar_ui.py    # 메뉴바 관리
+#    │	  	 ├── menubar_ui.py    # 메뉴바 관리
 #    │	  	 ├── monitoring_ui_system.py # 모니터링 UI 관리
 #    │	  	 └── document_ui_system.py # 문서 UI 관리
 #    ├── main_window.py        # 메인 윈도우 UI 및 로직
