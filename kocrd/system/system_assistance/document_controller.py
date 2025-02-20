@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget, QVBoxLayout
 import pandas as pd
 from fpdf import FPDF
 from kocrd.managers.document.document_table_view import DocumentTableView
-from kocrd_cpy.system.document_manager import DocumentManager
+from kocrd.system.document_manager import DocumentManager
 from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
 

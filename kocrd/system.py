@@ -133,7 +133,7 @@ class SystemManager:
         return DatabaseManager(self.settings_manager.get_setting("db_path"), self.settings_manager.get_setting("backup_path"))
 
     def create_ai_model_manager(self):
-        from kocrd_cpy.system.ai_model_manager import AIModelManager
+        from kocrd.system.ai_model_manager import AIModelManager
         return AIModelManager(self.settings_manager)  # AIModelManager 생성
 
     def get_temp_file_manager(self):

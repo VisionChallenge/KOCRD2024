@@ -9,17 +9,17 @@ from typing import Dict, Any, Optional
 from PyQt5.QtWidgets import QMessageBox, QApplication
 from PIL import Image, UnidentifiedImageError  # PIL import 위치 변경
 
-from kocrd_cpy.system.ocr_manager import OCRManager
+from kocrd.system.ocr_manager import OCRManager
 from kocrd.managers.temp_file_manager import TempFileManager
-from kocrd_cpy.system.database_manager import DatabaseManager
+from kocrd.system.database_manager import DatabaseManager
 from kocrd.window.menubar_manager import MenubarManager
-from kocrd_cpy.system.document_manager import DocumentManager
-from kocrd_cpy.system.ai_model_manager import AIModelManager
+from kocrd.system.document_manager import DocumentManager
+from kocrd.system.ai_model_manager import AIModelManager
 from kocrd.config.loader import ConfigLoader
 from kocrd.managers.manager_factory import ManagerFactory
 from kocrd.config.message.message_handler import MessageHandler
 from kocrd.managers.rabbitmq_manager import RabbitMQManager
-from kocrd_cpy.system.settings_manager import SettingsManager # SettingsManager import 유지
+from kocrd.system.settings_manager import SettingsManager # SettingsManager import 유지
 from kocrd.utils.embedding_utils import EmbeddingUtils # EmbeddingUtils import 유지
 from kocrd.config.config import Config  # Config import 추가
 
@@ -68,4 +68,4 @@ class SystemManager:
         return self.config
 
 # main_window 모듈을 나중에 임포트
-from kocrd_cpy.system.main_window import MainWindow
+from kocrd.system.main_window import MainWindow

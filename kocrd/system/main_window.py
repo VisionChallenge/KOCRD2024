@@ -7,6 +7,7 @@ from window.document_ui_system import DocumentUISystem
 from window.monitoring_ui_system import MonitoringUISystem
 from kocrd.window.menubar_manager import MenubarManager
 from kocrd.config.messages import messages
+from kocrd
 
 class MainWindow(QMainWindow):
     command_processed = pyqtSignal(str, str)  # (Command Text, AI Response) 신호

@@ -7,7 +7,7 @@ import tensorflow as tf
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 from kocrd.config.config import config
-from kocrd_cpy.system.database_manager import DatabaseManager
+from kocrd.system.database_manager import DatabaseManager
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 from kocrd.config.message.message_handler import MessageHandler
 from kocrd.config.loader import ConfigLoader
