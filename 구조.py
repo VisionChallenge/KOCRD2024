@@ -44,17 +44,14 @@
 # │  ├── __init__.py
 # │  ├── embedding_utils.py  # 접근 유틸리티 함수들
 # │  └── file_utils.py     # 파일 유틸리티 함수들
-# ├── handlers/           # 이벤트 핸들러
-# │  ├── __init__.py
-# │  ├── message_handler.py  # 메시지 핸들러
-# │  └── training_event_handler.py  # AI 이벤트 핸들러
 # └── config/             # 설정 파일
 #    ├── __init__.py
 #    ├── config.py
-#    ├── managers.json
-#    ├── messagers.json
+#    ├── development.json
 #    ├── queues.json
 #    ├── ui.json
+#    ├── message_handler.py
+#    ├── messages.json
 #    └── language/
 #        ├── __init__.py
 #        ├── ko.json
