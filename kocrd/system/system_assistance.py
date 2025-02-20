@@ -23,7 +23,7 @@ from kocrd.system.settings_manager import SettingsManager # SettingsManager impo
 from kocrd.utils.embedding_utils import EmbeddingUtils # EmbeddingUtils import 유지
 from kocrd.config.config import Config  # Config import 추가
 
-class SystemManager:
+class Systemassistance:
     def __init__(self, config_files: list, main_window=None):
         self.config_loader = ConfigLoader()
         self.config_loader.load_and_merge(config_files)

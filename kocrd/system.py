@@ -6,15 +6,13 @@ import pytesseract
 from typing import Dict, Any, Optional
 from PyQt5.QtWidgets import QMessageBox
 
-from managers.database_manager import DatabaseManager
-from managers.ocr.ocr_manager import OCRManager
-from Settings.settings_manager import SettingsManager
-from managers.document.document_manager import DocumentManager
-from managers.temp_file_manager import TempFileManager
-from kocrd.window.menubar_manager import MenubarManager
-from utils.embedding_utils import EmbeddingUtils
-from kocrd.config.config import ConfigManager
-from kocrd.managers.system_manager import SystemManager
+from system.database_manager import DatabaseManager
+from system.ocr_manager import OCRManager
+from system.settings_manager import SettingsManager
+from system.document_manager import DocumentManager
+from system.temp_file_manager import TempFileManager
+from system.system_assistance import Systemassistance
+from kocrd.system.config import ConfigManager
 
 logging.basicConfig(level=logging.DEBUG)
 

@@ -12,7 +12,7 @@ import sys
 from PyQt5.QtWidgets import QMessageBox
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from kocrd.system.system_assistance.ocr_utils import OCRHelper
+from kocrd.system.system_loder.ocr_utils import OCRHelper
 from Settings.settings_manager import SettingsManager
 from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
 from kocrd.config.config import get_temp_dir
