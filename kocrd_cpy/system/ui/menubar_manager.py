@@ -5,7 +5,7 @@ import logging
 from PyQt5.QtWidgets import QMenuBar, QAction, QMessageBox, QFileDialog, QApplication, QDialog
 
 from kocrd.config.config import load_config, get_message
-from kocrd.Settings.settings_manager import SettingsManager
+from kocrd_cpy.system.settings_manager import SettingsManager
 
 class MenubarManager:
     """메뉴바 이벤트 및 UI 관리 클래스."""
