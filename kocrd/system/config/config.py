@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Dict, Any, List, Optional
 import os
-from kocrd.config.loader import ConfigLoader
+from kocrd.system.config.loader import ConfigLoader
 from kocrd.config.message.message_handler import MessageHandler
 from kocrd.utils.file_utils import FileManager, show_message_box_safe
 from kocrd.managers.temp_file_manager import TempFileManager

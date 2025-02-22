@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Callable, Dict, Optional, Any, List
 from kocrd.utils.file_utils import FileManager, show_message_box_safe
-from kocrd.config.config import Config, load_config, merge_configs, get_temp_dir
+from kocrd.system.config.config import Config
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
 import pika
@@ -12,7 +12,7 @@ from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 class ConfigLoader:
     def __init__(self, config_path: str):
-        self.config = load_config(config_path)
+        self.config = Config(config_path)
         self.config_data = {}
         self.language_packs = {}
         self.current_language = "en"
@@ -103,13 +103,6 @@ class ConfigLoader:
     def load_messages(self, message_file_path):
         self.messages = self.file_manager.read_json(message_file_path)
     def get_setting
-
-    
-    def _determine_language(self):
-        preferred_language = self.get("ui.language")
-        if preferred_language and preferred_language in self.language_packs:
-            return preferred_language
-        return list(self.language_packs.keys())[0] if self.language_packs else "en"
 
     def handle_file_operation(self, operation: str, file_path: str, content=None, destination=None, file_type: str = "auto"):
         file_handlers = {

@@ -3,7 +3,7 @@ import json
 import logging
 from PyQt5.QtWidgets import QProgressBar, QTextEdit, QLineEdit, QListWidget, QVBoxLayout, QWidget
 
-from kocrd.config.config import load_config, get_message
+from kocrd import load_config, get_message
 
 class MonitoringUISystem(QWidget):
     def __init__(self, parent=None):
