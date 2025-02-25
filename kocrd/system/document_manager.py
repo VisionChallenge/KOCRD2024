@@ -12,11 +12,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from pdf2image import convert_from_path
 from typing import List, Optional
 from PyQt5.QtWidgets import QMessageBox
-from kocrd.config.config import config, get_message  # config import 추가
+from kocrd.system.config.config import config, get_message  # config import 추가
 from kocrd.managers.document.document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
-from system_manager import SystemManager
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
+from kocrd.system_manager import SystemManager
+from kocrd.system.config.loader import ConfigLoader  # ConfigLoader import 추가
+from kocrd.system.config.message.message_handler import MessageHandler  # MessageHandler import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), 'Document_config.json')
 message_handler = MessageHandler(config_path)  # MessageHandler 인스턴스 생성

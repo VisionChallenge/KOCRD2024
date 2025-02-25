@@ -1,4 +1,4 @@
-# kocrd/system/ui/Preferenceswindow_ui.py
+# kocrd/system/ui/preferenceswindow_ui.py
 from PyQt5.QtWidgets import (QMainWindow, QTabWidget, QVBoxLayout, QHBoxLayout, QPushButton)
 from PyQt5.QtWidgets import QLabel, QLineEdit, QWidget, QFileDialog, QMessageBox
 from PyQt5.QtWidgets import QInputDialog

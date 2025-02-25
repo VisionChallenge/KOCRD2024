@@ -2,7 +2,7 @@
 import logging
 import os
 from typing import Callable, Dict, Optional, Any, List
-from kocrd.utils.file_utils import FileManager, show_message_box_safe
+from kocrd.system.system_loder.file_utils import FileManager, show_message_box_safe
 from kocrd.system.config.config import Config
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
@@ -102,7 +102,6 @@ class ConfigLoader:
         self.current_language = self._determine_language()
     def load_messages(self, message_file_path):
         self.messages = self.file_manager.read_json(message_file_path)
-    def get_setting
 
     def handle_file_operation(self, operation: str, file_path: str, content=None, destination=None, file_type: str = "auto"):
         file_handlers = {
@@ -235,18 +234,3 @@ class ConfigLoader:
         logging.error(log_message)
         show_message_box_safe(error_message.format(error=exception), "오류")
         return log_message
-
-def get_message(message_id, error=None, **kwargs): # 전역 메시지 함수
-    messages = {
-        "501": "KeyError 발생: {error}",
-        "505": "일반 오류 발생: {error}",
-        "512": "JSON 디코딩 오류: {error}",
-        "518": "OCR 엔진 오류: {error}",
-        "error.import_error": "모듈 {module} 임포트 오류: {error}",
-        "error.attribute_error": "모듈 {module}에서 클래스 {class_name}를 찾을 수 없음: {error}",
-        "error.manager_init_error": "매니저 초기화 중 오류 발생: {error}",
-    }
-    message = messages.get(message_id, "알 수 없는 오류 발생")
-    if error:
-        message = message.format(error=error, **kwargs)
-    return message

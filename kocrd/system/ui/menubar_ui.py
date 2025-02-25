@@ -1,4 +1,4 @@
-# file_name: MenubarManager.py
+# kocrd/system/ui/menubar_ui.py
 import os
 import json
 import logging
@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QMenuBar, QAction, QMessageBox, QFileDialog, QMenu, 
 from kocrd.system.config.config import Config
 from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
 
-class MenubarManager:
+class Menubar:
     """메뉴바 이벤트 및 UI 관리 클래스."""
     def __init__(self, parent, config_path="config/ui.json"):
         super().__init__()
@@ -17,7 +17,6 @@ class MenubarManager:
         self.preferenceswindow = Preferenceswindow(self.parent)
         self.setup_menus()
         self.parent.setMenuBar(self.menu_bar)
-        self.add_actions
 
     def setup_menus(self):
         """메뉴바 설정."""

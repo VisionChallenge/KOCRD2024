@@ -1,15 +1,13 @@
-# filename: monitoring_ui_system.py
+# kocrd/system/ui/monitoring_ui.py
 import json
 import logging
-from PyQt5.QtWidgets import QProgressBar, QTextEdit, QLineEdit, QListWidget, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QProgressBar, QTextEdit, QLineEdit, QListWidget, QVBoxLayout, QWidget, QPushButton
+from kocrd.system.config.config import Config
 
-from kocrd import load_config, get_message
-
-class MonitoringUISystem(QWidget):
-    def __init__(self, parent=None):
+class MonitoringUI(QWidget):
+    def __init__(self, parent=None, config_path="config/ui.json"):  # config_path 추가
         super().__init__(parent)
-        self.config = load_config("config/ui.json")
-        self.messages_config = load_config("config/messages.json")
+        self.config = Config(config_path)  # Config 클래스 사용
         self.init_ui()
 
     def init_ui(self):
@@ -37,25 +35,30 @@ class MonitoringUISystem(QWidget):
         self.file_list_widget = QListWidget(self)
         layout.addWidget(self.file_list_widget)
 
+        # 초기화 버튼 추가
+        self.clear_button = QPushButton(self.config.coll_text("UI", "013"), self)
+        self.clear_button.clicked.connect(self.clear_table)
+        layout.addWidget(self.clear_button)
+
         self.setLayout(layout)
         self.load_ui_config()
 
     def load_ui_config(self):
         """UI 설정을 로드하고 적용합니다."""
         try:
-            components = self.config["components"]["monitoring"]["widgets"]
+            components = self.config.get("components", {}).get("monitoring", {}).get("widgets", [])  # Config 클래스 사용
             for component in components:
-                if component["name"] == "progress_bar":
+                if component.get("name") == "progress_bar":
                     self.progress_bar.setValue(0)
-                elif component["name"] == "log_display":
+                elif component.get("name") == "log_display":
                     self.log_display.setPlainText("")
-                elif component["name"] == "chat_output":
+                elif component.get("name") == "chat_output":
                     self.chat_output.setPlainText("")
-                elif component["name"] == "chat_input":
+                elif component.get("name") == "chat_input":
                     self.chat_input.setText("")
-                elif component["name"] == "file_list_widget":
+                elif component.get("name") == "file_list_widget":
                     self.file_list_widget.clear()
-            logging.info(get_message(self.messages_config, "328"))
+            logging.info(self.config.coll_text("LOG", "328"))  # coll_text 사용
         except KeyError as e:
             logging.error(f"Error loading UI configuration: {e}")
 
@@ -83,14 +86,18 @@ class MonitoringUISystem(QWidget):
             )
             return self.tokenizer.decode(output[0], skip_special_tokens=True)
         except Exception as e:
-            logging.error(f"Error generating AI response: {e}")
-            return get_message(self.messages_config, "520")
+            self.config.send_text("ERR", "520")  # "AI 응답 처리 중 오류가 발생했습니다."
+            return self.generate_ai_response(message)
 
     def update_file_list(self, documents):
         """가져온 파일 목록을 업데이트."""
         self.file_list_widget.clear()
         for doc in documents:
             self.file_list_widget.addItem(f"{doc['name']} ({doc['date']})")
+
+    def clear_table(self):
+        """파일 테이블을 초기화합니다."""
+        self.parent().document_ui.clear_table()
 
     def init_ui(self):
         central_widget = QWidget(self.main_window)
@@ -121,12 +128,7 @@ class MonitoringUISystem(QWidget):
             logging.error("Monitoring UI is not a QWidget. Cannot add progress bar.")
 
         splitter.setSizes([1000, 200])
-        logging.info(get_message(self.messages_config, "328"))
-
-    def load_config(self):
-        config_path = os.path.join(os.path.dirname(__file__), 'window_config.json')
-        with open(config_path, 'r') as f:
-            return json.load(f)
+        logging.info(self.config.coll_text("LOG", "328"))
 
 def setup_monitoring_ui():
     # ...existing code...

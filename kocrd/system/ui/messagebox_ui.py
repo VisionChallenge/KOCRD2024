@@ -1,19 +1,33 @@
 # kocrd/system/ui/messagebox_ui.py
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QApplication
+import logging
+from kocrd.system.config.config import Config
+from kocrd.system.ui import MainWindow
 
 class MessageBoxUI:
-    def __init__(self, messages, error_messages):
-        self.messages = messages
-        self.error_messages = error_messages
+    def __init__(self, config):
+        self.config = Config("config/development.json")
 
-        self.setWindowTitle(self.messages["main_window"]["title"])
-        self.setGeometry(100, 100, self.messages["main_window"]["size"]["width"], self.messages["main_window"]["size"]["height"])
+    def show_error_message(self, message):
+        self.config.main_window.show_error_message(message)
+
+    def show_question_message(self, message):
+        return self.config.main_window.show_question_message(message)
+
+    def show_warning_message(self, message):
+        self.config.main_window.show_warning_message(message)
+
+    def show_information_message(self, message):
+        self.config.main_window.show_information_message(message)
+
+    def show_confirmation_message(self, message):
+        return self.config.main_window.show_confirmation_message(message)
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
             self, 
-            self.get_message("16"), 
-            self.get_message("16"),
+            self.config.coll_text("UI", "016"), 
+            self.config.coll_text("UI", "016"),
             QMessageBox.Yes | QMessageBox.No, 
             QMessageBox.No
         )
