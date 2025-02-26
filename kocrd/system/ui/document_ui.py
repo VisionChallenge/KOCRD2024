@@ -6,18 +6,22 @@ from PyQt5.QtCore import Qt
 from kocrd.system.config.config import Config
 from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
-    
+from kocrd.system.document_manager import DocumentManager
+from kocrd.system.database_manager import DatabaseManager
+
 class DocumentUI:
-    def __init__(self, main_window):
+    def __init__(self, main_window, config, database_manager, document_manager):
+        super().__init__()
         self.main_window = main_window
-        self.table_widget = None
-        self.progress_bar = QProgressBar(main_window)
+        self.config = config
+        self.database_manager = database_manager
+        self.document_manager = document_manager
+        self.table_widget = QTableWidget()
+        self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        self.message_box = MessageBoxUI(self.config)  # MessageBoxUI 인스턴스 생성
-        self.monitoring_ui = MonitoringUI(self.config)  # MonitoringUI 인스턴스 생성
-        self.config = Config
-        self.init_ui()
+        self.message_box = MessageBoxUI(config)  # MessageBoxUI 인스턴스 생성
+        self.monitoring_ui = MonitoringUI(main_window, config)  # MonitoringUI 인스턴스 생성
 
     def init_ui(self):
         central_widget = QWidget(self.main_window)

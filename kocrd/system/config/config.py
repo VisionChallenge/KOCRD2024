@@ -28,8 +28,8 @@ class FilePathConfig:
 class UIConfig:
     def __init__(self, config_file):
         self.config_file = config_file
-        self.config = self.load_config()
         self.config_loader = ConfigLoader(self.config_file)
+
 
     def get(self, key_path, default=None):
         return self.config_loader.get(key_path, default)
@@ -45,22 +45,34 @@ class UIConfig:
         except json.JSONDecodeError:
             logging.error(f"UI config file '{self.config_file}' is not a valid JSON file.")
             return {}
+    def calculate_module_sizes(self, window_width):
+        """모듈 크기를 계산합니다."""
+        doc_width, _ = self.get_window_size("01_d") or self.get_window_default_size("01_d")
+        mon_width, _ = self.get_window_size("01_mo") or self.get_window_default_size("01_mo")
+        if doc_width and mon_width:
+            total_width = doc_width + mon_width
+            doc_ratio, mon_ratio = doc_width / total_width, mon_width / total_width
+            available_width = window_width - 10
+            new_doc_width = int(available_width * doc_ratio)
+            new_mon_width = int(available_width * mon_ratio)
+            return {"document_width": new_doc_width, "monitoring_width": new_mon_width}
+        return None
+
 
     def get_window_default_size(self, name):
-        """기본 창 크기를 반환합니다."""
-        default_size = self.config.get("default_size", [])
+        default_size = self.get("default_size", [])
         for size in default_size:
             if size.get("name") == name:
                 return size.get("W"), size.get("H")
         return None, None
 
     def get_window_size(self, name):
-        """사용자 설정 창 크기를 반환합니다."""
-        window_size = self.config.get("window_size", [])
+        window_size = self.get("window_size", [])
         for size in window_size:
             if size.get("name") == name:
                 return size.get("W"), size.get("H")
         return None, None
+
 
     def set_window_size(self, name, width, height):
         """사용자 설정 창 크기를 저장합니다."""
