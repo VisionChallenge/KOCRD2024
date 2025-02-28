@@ -10,11 +10,17 @@ from kocrd.system.config.config import Config
 from kocrd.system.ui.menubar_ui import Menubar
 from kocrd.system.database_manager import DatabaseManager
 from kocrd.system.document_manager import DocumentManager
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-class MainWindow(QMainWindow):
-    def __init__(self, config_file="config/ui.json"):
+class MainWindow(QMainWindow, QObject):
+    document_updated = pyqtSignal(str, int)
+    progress_changed = pyqtSignal(str, int)
+
+    def __init__(self, config_file="config/ui.json", database_manager=None, document_manager=None):
         super().__init__()
         self.config = Config(config_file)
+        self.database_manager = database_manager or DatabaseManager()
+        self.document_manager = document_manager or DocumentManager()
         self.init_ui()
 
     def init_ui(self):
@@ -29,6 +35,26 @@ class MainWindow(QMainWindow):
         self.monitoring_ui.init_ui()
         self.menubar.setup_menus()
         self.resize_ui_modules(self.width())
+
+        # 신호 연결
+        self.document_updated.connect(self.handle_document_update)
+        self.progress_changed.connect(self.handle_progress_change)
+
+    def update_document(self, text, number):
+        self.document_updated.emit(text, number)
+
+    def update_progress(self, text, number):
+        self.progress_changed.emit(text, number)
+
+    @pyqtSlot(str, int)
+    def handle_document_update(self, text, number):
+        print(f"문서 업데이트 신호 수신: {text}, {number}")
+        # 문서 업데이트 처리
+
+    @pyqtSlot(str, int)
+    def handle_progress_change(self, text, number):
+        print(f"진행률 변경 신호 수신: {text}, {number}")
+        # 진행률 업데이트 처리
 
     def set_window_size(self):
         width, height = self.config.get_window_size("01_u")
