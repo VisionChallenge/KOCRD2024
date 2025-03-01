@@ -11,7 +11,12 @@ class MonitoringUI(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.progress_bar)
+        self.log_display = QTextEdit()
+        self.log_display.setReadOnly(True)
+        layout.addWidget(self.log_display)
+        self.setLayout(layout)
 
         # Progress Bar
         self.progress_bar = QProgressBar(self)

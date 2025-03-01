@@ -1,17 +1,22 @@
 {
-  "default_size": [
-    {"name": "01_m", "W": 1200, "H": 800},
-    {"name": "01_d", "W": 600},
-    {"name": "01_mo", "W": 600}
-  ],
-  "window_size": [],
-  "document_size": [],
-  "monitoring_size": [],
+  "window_settings": {
+    "default": {
+      "main_window": {"width": 1200, "height": 800},
+      "document_area": {"width_ratio": 0.7},
+      "monitoring_area": {"width_ratio": 0.3}
+    },
+    "current": {
+      "main_window": {"width": 1200, "height": 800},
+      "document_area": {"width_ratio": 0.7},
+      "monitoring_area": {"width_ratio": 0.3}
+    },
+    "minimum": {"width": 500, "height": 200}
+  },
   "table_columns": [
-    {"name": "파일명", "order": 0, "W": 200},
-    {"name": "유형", "order": 1, "W": 100},
-    {"name": "날짜", "order": 2, "W": 150},
-    {"name": "크기", "order": 3, "W": 100},
-    {"name": "확장자", "order": 4, "W": 100}
+    {"name": "파일명", "order": 0, "width": 200},
+    {"name": "유형", "order": 1, "width": 100},
+    {"name": "날짜", "order": 2, "width": 150},
+    {"name": "크기", "order": 3, "width": 100},
+    {"name": "확장자", "order": 4, "width": 100}
   ]
 }
