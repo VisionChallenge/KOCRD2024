@@ -11,9 +11,6 @@ from kocrd.config.messages import messages
 class MainWindow(QMainWindow):
     command_processed = pyqtSignal(str, str)  # (Command Text, AI Response) 신호
 
-
-
-
     def trigger_process(self, process_type, data=None):
         self.system_manager.trigger_process(process_type, data) # SystemManager에 위임
 
