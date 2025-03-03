@@ -14,16 +14,22 @@
   },
   "table_columns": [
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     {"name": "파일명", "order": 0, "width": 200},
     {"name": "유형", "order": 1, "width": 100},
     {"name": "날짜", "order": 2, "width": 150},
     {"name": "크기", "order": 3, "width": 100},
     {"name": "확장자", "order": 4, "width": 100}
 =======
+=======
+>>>>>>> Stashed changes
     {"name":"파일명", "order":0, "W": },
     {"name":"유형","order":1, "W":},
     {"name":"날짜","order":2, "W":},
     {"name":"크기","order":3, "W":}
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   ]
 }
