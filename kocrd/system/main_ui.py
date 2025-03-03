@@ -8,7 +8,7 @@ from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
 from kocrd.system.config.config_module import Config, UIConfig
 from kocrd.system.database_manager import DatabaseManager
 from kocrd.system.document_manager import DocumentManager
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, Qt
 
 class MainWindow(QMainWindow, QObject):
     document_updated = pyqtSignal(str, int)
@@ -21,7 +21,7 @@ class MainWindow(QMainWindow, QObject):
         self.config = Config(config_file)
         self.database_manager = database_manager or DatabaseManager()
         self.document_manager = document_manager or DocumentManager()
-        self.messages = self.config.get_messages()
+        self.messages = self.config.language_controller.messages()
         self.init_ui()
 
     def init_ui(self):
@@ -77,7 +77,7 @@ class MainWindow(QMainWindow, QObject):
     def set_window_size(self):
         width, height = self.config.ui.get_window_size("main_window_size")
         if width is None or height is None:
-            width, height = self.config.ui.get_window_default_size("main_window_size")
+            width, height = self.config..get_window_default_size("main_window_size")
         if width and height:
             self.resize(width, height)
         min_w, min_h = self.config.ui.get_min_size()
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow, QObject):
 
     def execute_action(self, action, confirmation_key=None, success_key=None, error_key=None, **kwargs):
         if confirmation_key:
-            message = self.config.config.message_handler.get_message("MSG", confirmation_key).format(**kwargs)
+            message = self.config.language_controller.get_message("MSG", confirmation_key).format(**kwargs)
             if not self.main_window.show_confirmation_message(message):
                 return
 

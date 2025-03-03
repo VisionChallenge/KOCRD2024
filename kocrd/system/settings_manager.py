@@ -10,13 +10,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog
 from typing import Union, List, Tuple, Callable, Dict, Optional
 from pika.exceptions import AMQPConnectionError
-from kocrd.config.config import load_config, get_message, handle_error, send_message_to_queue
-
+from kocrd.system.config.config_module import 
 class SettingsManager:
     """설정 관리 클래스."""
     def __init__(self, config_file="config/development.json"):
         self.config_file = os.path.abspath(config_file)
-        self.config = load_config(self.config_file)
         self.settings: Dict[str, Union[str, int, list, dict]] = {}
         self.load_config()
         self.load_from_env()

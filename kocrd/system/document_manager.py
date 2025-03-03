@@ -1,4 +1,4 @@
-# file_name: document_manager
+# kocrd\system\document_manager.py
 
 import os
 import pika
@@ -12,11 +12,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from pdf2image import convert_from_path
 from typing import List, Optional
 from PyQt5.QtWidgets import QMessageBox
-from kocrd.system.config.config_module import config, get_message  # config import 추가
+from kocrd.system.config.config_module import Config
 from kocrd.managers.document.document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
-from kocrd.system_manager import SystemManager
-from kocrd.system.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.system.config.message.message_handler import MessageHandler  # MessageHandler import 추가
+from kocrd.system.config.config_module import MessageHandler  # MessageHandler import 추가
+from kocrd.system.system_assistance import SystemManager
 
 config_path = os.path.join(os.path.dirname(__file__), 'Document_config.json')
 message_handler = MessageHandler(config_path)  # MessageHandler 인스턴스 생성
@@ -45,11 +44,10 @@ class DocumentManager(QWidget):
         self.document_processor = DocumentProcessor(database_manager, ocr_manager, parent, self, message_queue_manager)
         self.document_table_view = DocumentTableView(self)
         self.document_controller = DocumentController(self.document_processor, parent, self)
-        self.system_manager = SystemManager(config)
+        self.system_manager = SystemManager()
 
-        self.config = self.system_manager.get_config() # config 객체 가져오기
-        self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
-        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 인스턴스 생성
+        self.config = Config() # config 객체 가져오기
+        self.message_handler = MessageHandler()
 
         logging.info("DocumentManager initialized.")
     
@@ -78,6 +76,15 @@ class DocumentManager(QWidget):
     def update_document_info(self, document_info):
         """문서 정보를 업데이트."""
         self.database_manager.update_document_info(document_info)
+    def update_document_type(self, current_file_name, new_type, selected_row):
+        """문서 유형을 업데이트합니다."""
+        try:
+            self.database_manager.update_document_type(current_file_name, new_type)
+            self.document_table.update_item_text(selected_row, 1, new_type)
+            logging.info(f"Updated document type for {current_file_name} to {new_type}")
+        except Exception as e:
+            logging.error(f"Error updating document type: {e}")
+            self.message_box.show_error_message(self.message_handler.get_message("ERR", "205"))
 
     def delete_document(self, file_name):
         """문서를 데이터베이스에서 삭제."""

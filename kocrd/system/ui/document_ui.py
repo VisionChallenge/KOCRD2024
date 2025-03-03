@@ -2,23 +2,23 @@
 import logging
 import json
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QTextEdit, QProgressBar, QTableWidget, QHeaderView, QMessageBox, QInputDialog, QTableWidgetItem
-from kocrd.system.config.config_module import Config
-from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
 from kocrd.system.document_manager import DocumentManager
 from kocrd.system.database_manager import DatabaseManager
 from kocrd.system.main_ui import MainWindow
-from kocrd.system.config.message.message_handler import MessageHandler
+from kocrd.system.config.config_module import Config, LanguageController
+
 class DocumentUI(QWidget):
-    def __init__(self, main_window, config, database_manager, document_manager):
+    def __init__(self, main_window: MainWindow, config: Config, database_manager: DatabaseManager, document_manager: DocumentManager, message_box: MessageBoxUI, LanguageController: LanguageController):
         super().__init__()
-        self.main_window = MainWindow
+        self.main_window = main_window
         self.config = config
         self.database_manager = database_manager
         self.document_manager = document_manager
-        self.table_widget = QTableWidget()
+        self.message_handler = LanguageController
+        self.message_box = message_box
         self.init_ui()
-        self.massge_box = MessageHandler
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.addWidget(self.create_table_widget())
@@ -36,34 +36,21 @@ class DocumentUI(QWidget):
 
         return self.table_widget
 
-
     def clear_table(self):
         """파일 테이블을 초기화합니다."""
-        self.main_window.execute_action(self._clear_table_action, "202", "203")
+        self.document_manager.clear_table()
+        logging.info(self.message_handler.get_message("MSG", "203"))
 
-    def _clear_table_action(self):
-        self.table_widget.setRowCount(0)
-        logging.info(self.config.get_message("MSG", "203"))
-
-    def update_document_info(self, database_manager):
+    def update_document_info(self):
         """선택된 문서의 정보를 업데이트합니다."""
-        selected_items = self.table_widget.selectedItems()
+        selected_items = self.document_manager.get_selected_items()
         if not selected_items:
-            self.main_window.show_warning_message(self.config.message_handler.get_message("MSG", "208"))
+            self.message_box.show_warning_message(self.message_handler.get_message("MSG", "208"))
             return
 
         selected_row = selected_items[0].row()
-        current_file_name = self.table_widget.item(selected_row, 0).text()
-        new_type, ok = QInputDialog.getText(self.main_window, "문서 유형 수정", f"{current_file_name}의 새로운 문서 유형을 입력하세요:")
+        current_file_name = self.document_manager.get_item_text(selected_row, 0)
+        new_type, ok = QInputDialog.getText(self, "문서 유형 수정", f"{current_file_name}의 새로운 문서 유형을 입력하세요:")
         if ok and new_type:
-            self._execute_action(
-                lambda: self._update_document_type(database_manager, current_file_name, new_type, selected_row),
-                success_key="204",
-                error_key="205"
-            )
-
-    def _update_document_type(self, database_manager, current_file_name, new_type, selected_row):
-        database_manager.update_document_type(current_file_name, new_type)
-        self.table_widget.setItem(selected_row, 1, QTableWidgetItem(new_type))
-        logging.info(f"Updated document type for {current_file_name} to {new_type}")
+            self.document_manager.update_document_type(current_file_name, new_type, selected_row)
 

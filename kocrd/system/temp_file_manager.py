@@ -13,11 +13,9 @@ import threading
 import pika
 import sys
 
-from kocrd.system.config.loader import ConfigLoader
 
 class TempFileManager:
-    def __init__(self, config_loader: ConfigLoader):
-        self.config_loader = config_loader
+    def __init__(self):
         self.temp_dir = self.config_loader.get_file_paths().get("temp_dir")  # 설정 파일에서 가져옴
 
         if not self.temp_dir:

@@ -1,15 +1,13 @@
 # kocrd/system/ui/messagebox_ui.py
 from PyQt5.QtWidgets import QMessageBox, QApplication
 import logging
-from kocrd.system.config.config_module import Config
-from kocrd.system.ui import MainWindow
+from kocrd.system.main_ui import MainWindow
 
 class MessageBoxUI:
-    def __init__(self, config):
-        self.config = Config("config/development.json")
-
+    def __init__(self):
+        self.main_window = MainWindow()
     def show_error_message(self, message):
-        self.config.main_window.show_error_message(message)
+        self.main_window.show_error_message(message)
 
     def show_question_message(self, message):
         return self.config.main_window.show_question_message(message)
