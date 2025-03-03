@@ -2,7 +2,6 @@
 import logging
 import json
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QTextEdit, QProgressBar, QTableWidget, QHeaderView, QMessageBox, QInputDialog, QTableWidgetItem
-from PyQt5.QtCore import Qt
 from kocrd.system.config.config import Config
 from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
