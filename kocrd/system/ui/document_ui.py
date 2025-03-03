@@ -8,17 +8,18 @@ from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
 from kocrd.system.document_manager import DocumentManager
 from kocrd.system.database_manager import DatabaseManager
-from kocrd.system.ui import MainWindow
+from kocrd.system.main_ui import MainWindow
+from kocrd.system.config.message.message_handler import MessageHandler
 class DocumentUI(QWidget):
     def __init__(self, main_window, config, database_manager, document_manager):
         super().__init__()
-        self.main_window = 
+        self.main_window = MainWindow
         self.config = config
         self.database_manager = database_manager
         self.document_manager = document_manager
         self.table_widget = QTableWidget()
         self.init_ui()
-
+        self.massge_box = MessageHandler
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.addWidget(self.create_table_widget())
@@ -39,17 +40,17 @@ class DocumentUI(QWidget):
 
     def clear_table(self):
         """파일 테이블을 초기화합니다."""
-        self._execute_action(self._clear_table_action, "202", "203")
+        self.main_window.execute_action(self._clear_table_action, "202", "203")
 
     def _clear_table_action(self):
         self.table_widget.setRowCount(0)
-        logging.info(self.message_box.get_message("MSG", "203"))
+        logging.info(self.config.get_message("MSG", "203"))
 
     def update_document_info(self, database_manager):
         """선택된 문서의 정보를 업데이트합니다."""
         selected_items = self.table_widget.selectedItems()
         if not selected_items:
-            self.main_window.show_warning_message(self.config.config.message_handler.get_message("MSG", "208"))
+            self.main_window.show_warning_message(self.config.message_handler.get_message("MSG", "208"))
             return
 
         selected_row = selected_items[0].row()

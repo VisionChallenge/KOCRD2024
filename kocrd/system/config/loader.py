@@ -20,35 +20,6 @@ class ConfigLoader:
         self.load_language_packs("kocrd/config/language")
         self.load_messages("kocrd/config/message/messages.json")
 
-    def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
-        lang_pack = self.language_packs.get(self.current_language)
-        if not lang_pack:
-            logging.error(f"Language pack for '{self.current_language}' not found.")
-            return None
-        message = lang_pack.get(message_id) or self.messages.get(message_id)
-        if message:
-            return message.format(*args, **kwargs)
-        logging.error(f"Message ID '{message_id}' not found.")
-        return None
-    def _message(self, key: str, *args, **kwargs) -> str:
-        message = self.get_message(key) or "Unknown message"
-        return message.format(*args, **kwargs) if message else "Unknown message"
-
-    def handle_message(self, message_id, data, message_type):
-        handlers = {
-            "LOG": logging.info,
-            "WARN": logging.warning,
-            "ERR": logging.error,
-            "ID": logging.info,
-            "MSG": logging.info,
-            "OCR": self._process_ocr_request,
-        }
-        handler = handlers.get(message_type)
-        if handler:
-            message = self._message(message_id, **data)
-            handler(message, data) if message_type == "OCR" else handler(message)
-        else:
-            logging.warning(f"Unknown message type: {message_type}")
     def create_ocr_engine(self, ocr_engine_type):
         # OCR 엔진 생성 로직 구현
         pass
@@ -74,16 +45,7 @@ class ConfigLoader:
                 continue
             self.config_data = merge_configs(self.config_data, config_data)
 
-    def get(self, key_path, default=None):
-        def _get(data, keys):
-            if not keys:
-                return data
-            key = keys[0]
-            if isinstance(data, dict) and key in data:
-                return _get(data[key], keys[1:])
-            return default
 
-        return _get(self.config, key_path.split("."))
     def validate(self, key_path: str, validator: callable, message: str):
         value = self.get(key_path)
         if not validator(value):
@@ -116,7 +78,7 @@ class ConfigLoader:
         if handler:
             return handler()
         else:
-            logging.error(self._message("error.507", e=f"Unsupported operation: {operation}"))
+            logging.error(self.config._message("error.507", e=f"Unsupported operation: {operation}"))
             return False
 
     def initialize_database(self, engine):
@@ -126,9 +88,9 @@ class ConfigLoader:
             with engine.connect() as conn:
                 for query in queries:
                     conn.execute(query)
-            logging.info(self._message("db_init_success"))
+            logging.info(self.config._message("db_init_success"))
         except (SQLAlchemyError, IOError, KeyError) as e:
-            logging.error(self._message("db_init_fail", error=e))
+            logging.error(self.config._message("db_init_fail", error=e))
             raise RuntimeError("Database initialization failed.") from e
 
     def handle_db_exception(self, func):
@@ -155,10 +117,10 @@ class ConfigLoader:
     def load_tensorflow_model(self, model_path):
         try:
             model = tf.keras.models.load_model(model_path)
-            logging.info(self._message("model_load_success", model_path=model_path))
+            logging.info(self.config._message("model_load_success", model_path=model_path))
             return model
         except Exception as e:
-            self.handle_error("model_load_error", "505", exception=e, message=self._message("model_load_fail", model_path=model_path))
+            self.handle_error("model_load_error", "505", exception=e, message=self.config._message("model_load_fail", model_path=model_path))
             return None
 
     def load_gpt_model(self, gpt_model_path):
@@ -191,11 +153,11 @@ class ConfigLoader:
                     *dependencies_instances, **kwargs
                 )
             except ImportError as e:
-                logging.error(self._message("error.import_error", module=module_path, error=e))
+                logging.error(self.config._message("error.import_error", module=module_path, error=e))
             except AttributeError as e:
-                logging.error(self._message("error.attribute_error", class_name=class_name, module=module_path, error=e))
+                logging.error(self.config._message("error.attribute_error", class_name=class_name, module=module_path, error=e))
             except Exception as e:
-                logging.error(self._message("error.manager_init_error", error=e))
+                logging.error(self.config._message("error.manager_init_error", error=e))
 
     def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
         """AI 모델 실행 프로세스 트리거"""

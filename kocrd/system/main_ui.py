@@ -153,7 +153,7 @@ class MainWindow(QMainWindow, QObject):
         database_manager.delete_document(file_name)
         logging.info(self.config.config.message_handler.get_message("MSG", "206").format(file_name=file_name))
 
-    def _execute_action(self, action, confirmation_key=None, success_key=None, error_key=None, **kwargs):
+    def execute_action(self, action, confirmation_key=None, success_key=None, error_key=None, **kwargs):
         if confirmation_key:
             message = self.config.config.message_handler.get_message("MSG", confirmation_key).format(**kwargs)
             if not self.main_window.show_confirmation_message(message):
