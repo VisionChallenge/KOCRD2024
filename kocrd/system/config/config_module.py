@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
 from kocrd.system.system_loder.file_utils import FileManager, show_message_box_safe
 from kocrd.system.temp_file_manager import TempFileManager
-from kocrd.system.ui.messagebox_ui import MessageBoxUI
+from kocrd.system.main_ui import MainWindow
 from enum import Enum
 
 class MessageType(Enum):
@@ -37,35 +37,6 @@ class FilePathConfig:
         self.document_embedding = config.get("file_paths.document_embedding")
         self.document_types = config.get("file_paths.document_types")
         self.temp_files = config.get("file_paths.temp_files")
-
-class UIConfig:
-    def __init__(self, config):
-        self.config = config.config_data.get("window_settings", {})
-        self.config_instance = config  # Config 인스턴스 저장
-
-    def get_window_setting(self, setting_type, area=None, key=None):
-        if area and key:
-            return self.config.get(setting_type, {}).get(area, {}).get(key)
-        elif area:
-            return self.config.get(setting_type, {}).get(area)
-        else:
-            return self.config.get(setting_type)
-
-    def set_window_setting(self, setting_type, area, key, value):
-        self.config[setting_type][area][key] = value
-        self.config_instance.save_config()  # Config 클래스의 save_config 메소드 사용
-
-    def set_splitter_ratio(self, ratio):
-        self.set_window_setting("current", "document_area", "width_ratio", ratio)
-        self.set_window_setting("current", "monitoring_area", "width_ratio", 1 - ratio)
-
-    def get_splitter_ratio(self):
-        return self.get_window_setting("current", "document_area", "width_ratio")
-
-    def get_min_size(self):
-        min_width = self.get_window_setting("minimum", "width")
-        min_height = self.get_window_setting("minimum", "height")
-        return min_width if min_width else 500, min_height if min_height else 200
 
 class LanguageController:
     def __init__(self, language_config_path="kocrd/system/config/language/loader_language.json"):
@@ -137,7 +108,7 @@ class MessageHandler:
     def __init__(self, config):
         self.config = config
         self.language_controller = LanguageController()
-        self.message_box_ui = MessageBoxUI(config)
+        self.main_window = MainWindow()
         self.message_handlers = {
             MessageType.ERR: self._handle_error_message,
             MessageType.WARN: self._handle_warning_message,
@@ -157,12 +128,12 @@ class MessageHandler:
 
     def _handle_error_message(self, message_id: str, data: dict = None):
         message = self.language_controller.get_message(message_id, MessageType.ERR)
-        self.message_box_ui.show_error_message(message)
+        self.main_window.show_error_message(message)
         logging.error(message)
 
     def _handle_warning_message(self, message_id: str, data: dict = None):
         message = self.language_controller.get_message(message_id, MessageType.WARN)
-        self.message_box_ui.show_warning_message(message)
+        self.main_window.show_warning_message(message)
         logging.warning(message)
 
     def _handle_log_message(self, message_id: str, data: dict = None):
@@ -194,7 +165,7 @@ class Config:
         self.message_handler = MessageHandler(self)
         self.rabbitmq = RabbitMQConfig(self)
         self.file_paths = FilePathConfig(self)
-        self.ui = UIConfig(self)
+        self.ui = None  # UIConfig 삭제
         self.managers = {}
         self.manager_instances = {}
         self.initialize_managers()
