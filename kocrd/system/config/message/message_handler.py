@@ -4,10 +4,13 @@ import logging
 from typing import Callable, Dict, Optional, Any
 import os
 import pika
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config, LanguageController
+from typing import Dict, Callable, Any, Optional
+
 class MessageHandler:
     def __init__(self, config):
         self.config = Config
+        self.language_controller = LanguageController
         self.message_handlers: Dict[str, Callable[[str, Dict[str, Any]], Optional[str]]] = {
             "MSG": self._handle_message,
             "LOG": self._handle_message,
@@ -17,12 +20,9 @@ class MessageHandler:
             "OCR": self._handle_message,
         }
 
-    def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
-        return self.config._message(message_id, *args, **kwargs)
-
-    def _handle_message(self, message_id: str, data: Dict[str, Any]) -> Optional[str]:
-        return self.config.handle_message(message_id, data, "MSG")  # 기본 메시지 타입으로 처리
-
+    def _handle_message(self, message_id: str, data: Dict[str, Any], message_type: str) -> Optional[str]:
+        """메시지 타입과 메시지 ID에 해당하는 메시지를 반환합니다."""
+        return self.language_controller.get_message(message_type, message_id)
     def process_message(self, ch, method, properties, body):
         try:
             message = json.loads(body)

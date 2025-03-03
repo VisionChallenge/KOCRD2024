@@ -1,4 +1,4 @@
-# kocrd/system/config/config.py
+# kocrd/system/config/config_module.py
 import logging
 import re
 from typing import Dict, Any, List, Optional
@@ -33,18 +33,15 @@ class UIConfig:
         self.config_loader = ConfigLoader(self.config_file)
         self.config = self.load_config()
 
-    def get(self, key_path, default=None):
-        return self.config_loader.get(key_path, default)
     def get_window_setting(self, setting_type, area=None, key=None):
-        """창 크기 설정을 가져옵니다."""
         if area and key:
             return self.config.get(f"window_settings.{setting_type}.{area}.{key}")
         elif area:
             return self.config.get(f"window_settings.{setting_type}.{area}")
         else:
             return self.config.get(f"window_settings.{setting_type}")
+
     def set_window_setting(self, setting_type, area, key, value):
-        """창 크기 설정을 저장합니다."""
         self.config[f"window_settings.{setting_type}.{area}.{key}"] = value
         self.save_config()
     def set_splitter_ratio(self, ratio):
@@ -78,54 +75,59 @@ class UIConfig:
         except Exception as e:
             logging.error(f"Error saving UI config file: {e}")
 
-class Languageconfig:
-    def __init__(self, config):
-        self.config = config
-        self.language_packs = {}
+class LanguageController:
+    def __init__(self, language_config_path="kocrd/system/config/language/loader_language.json"):
+        self.language_packs: Dict[str, Dict[str, str]] = {}
+        self.language_configs = self._load_language_configs(language_config_path)
+        self.current_language = "en"  # 기본 언어 설정
+        self._load_all_language_packs()
+    def _load_language_configs(self, config_path: str) -> Dict[str, Dict[str, str]]:
+        """언어 설정 파일을 로드합니다."""
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logging.error(f"Language config file '{config_path}' not found.")
+            return {}
+        except json.JSONDecodeError:
+            logging.error(f"Language config file '{config_path}' is not a valid JSON file.")
+            return {}
 
-    def load_language_packs(self, lang_dir="kocrd/system/config/language"): #언어팩 경로 인수를 받음
-        self.language_packs = {} #기존 언어팩 초기화
-        for filename in os.listdir(lang_dir):
-            if filename.endswith(".json"):
-                file_path = os.path.join(lang_dir, filename)
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        lang_pack = json.load(f)
-                        language = lang_pack.get("language")
-                        if language:
-                            self.language_packs[language] = lang_pack
-                        else:
-                            logging.warning(f"Language pack '{filename}' does not have 'language' attribute.")
-                except FileNotFoundError:
-                    logging.error(f"Language pack '{filename}' not found.")
-                except json.JSONDecodeError:
-                    logging.error(f"Language pack '{filename}' is not a valid JSON file.")
 
-    def get_message_text(self, message_type, collnumbur, language):
-        lang_pack = self.language_packs.get(language)
-        if lang_pack:
-            messages = lang_pack.get("messages")  # "messages" 키로 메시지 딕셔너리 접근
-            if messages:
-                message_type_messages = messages.get(message_type)  # 메시지 타입별 딕셔너리 접근
-                if message_type_messages:
-                    message = message_type_messages.get(str(collnumbur))  # collnumbur를 문자열로 변환하여 접근
-                    if message:
-                        return message
-                    else:
-                        logging.warning(f"Message '{collnumbur}' not found in language pack '{language}' for type '{message_type}'.")
-                        return None
-                else:
-                    logging.warning(f"Messages for type '{message_type}' not found in language pack '{language}'.")
-                    return None
-            else:
-                logging.warning(f"Messages not found in language pack '{language}'.")
-                return None
+    def _load_all_language_packs(self):
+        """모든 언어팩을 로드합니다."""
+        for lang_code, config in self.language_configs.items():
+            lang_pack_path = config.get("language_pack")
+            if lang_pack_path:
+                self._load_language_pack(lang_code, lang_pack_path)
+
+    def _load_language_pack(self, lang_code: str, lang_pack_path: str):
+        """특정 언어팩을 로드합니다."""
+        try:
+            with open(lang_pack_path, "r", encoding="utf-8") as f:
+                self.language_packs[lang_code] = json.load(f)
+        except FileNotFoundError:
+            logging.error(f"Language pack '{lang_pack_path}' not found.")
+        except json.JSONDecodeError:
+            logging.error(f"Language pack '{lang_pack_path}' is not a valid JSON file.")
+
+    def set_language(self, language_code: str):
+        """현재 언어를 설정합니다."""
+        if language_code in self.language_packs:
+            self.current_language = language_code
         else:
-            logging.warning(f"Language pack '{language}' not found.")
-            return None
+            logging.warning(f"Language code '{language_code}' not found in language packs.")
 
-    def determine_language(self):
-        preferred_language = self.get("ui.language")
+    def get_message(self, message_type: str, message_id: str) -> str:
+        """메시지 타입과 메시지 ID에 해당하는 메시지를 반환합니다."""
+        lang_pack = self.language_packs.get(self.current_language)
+        if lang_pack:
+            messages = lang_pack.get("messages", {}).get(message_type, {})
+            return messages.get(message_id, f"Message '{message_type}_{message_id}' not found.")
+        return f"Language pack for '{self.current_language}' not found."
+
+    def determine_language(self, preferred_language: str = None) -> str:
+        """사용자 선호 언어를 결정합니다."""
         if preferred_language and preferred_language in self.language_packs:
             return preferred_language
         return list(self.language_packs.keys())[0] if self.language_packs else "en"
@@ -133,32 +135,31 @@ class Languageconfig:
 class Config:
     def __init__(self, config_file):
         self.config_loader = ConfigLoader(config_file)  # ConfigLoader에 config_file 전달
-        self.config_loader.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])
+        self.config_data = self.config_loader.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])
         self.temp_dir = self.config_loader.get("file_paths.temp_files")
         self.backup_dir = os.path.join(self.temp_dir, "backup")
         os.makedirs(self.backup_dir, exist_ok=True)
         self.file_manager = FileManager(self.temp_dir, self.backup_dir, [])
-        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 초기화
+        self.message_handler = MessageHandler(self)
         self.rabbitmq = RabbitMQConfig(self.config_loader)
         self.file_paths = FilePathConfig(self.config_loader)
         self.ui = UIConfig(self.config_loader)
         self.managers = {}
         self.initialize_managers()
         self.temp_file_manager = TempFileManager(self.file_manager)
-        self.language_config = Languageconfig(self)
+        self.language_controller = LanguageController()
         self.message_box_ui = MessageBoxUI(self)  # MessageBoxUI 인스턴스 생성, Config 인스턴스 전달
 
     def get(self, key_path, default=None):
-        def _get(data, keys):
-            if not keys:
-                return data
-            key = keys[0]
+        keys = key_path.split(".")
+        data = self.config_data
+        for key in keys:
             if isinstance(data, dict) and key in data:
-                return _get(data[key], keys[1:])
-            return default
+                data = data[key]
+            else:
+                return default
+        return data
 
-        return _get(self. get, key_path.split("."))
-    
     def validate(self, key_path: str, validator: callable, message: str):
         self.config_loader.validate(key_path, validator, message)
 

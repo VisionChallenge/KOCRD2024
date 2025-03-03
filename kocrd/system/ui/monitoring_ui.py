@@ -2,7 +2,7 @@
 import json
 import logging
 from PyQt5.QtWidgets import QProgressBar, QTextEdit, QLineEdit, QListWidget, QVBoxLayout, QWidget, QPushButton
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config
 
 class MonitoringUI(QWidget):
     def __init__(self, parent=None, config_path="config/ui.json"):

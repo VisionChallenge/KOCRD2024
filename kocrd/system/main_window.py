@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
 
     def get_message(self, key):
         """메시지 키를 통해 메시지를 가져옵니다."""
-        return self.messages.get(key, "메시지를 찾을 수 없습니다.")
+        return self.config.get(key, "메시지를 찾을 수 없습니다.")
 
     def get_error_message(self, key):
         """에러 메시지 키를 통해 에러 메시지를 가져옵니다."""

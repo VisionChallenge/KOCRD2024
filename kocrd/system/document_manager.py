@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from pdf2image import convert_from_path
 from typing import List, Optional
 from PyQt5.QtWidgets import QMessageBox
-from kocrd.system.config.config import config, get_message  # config import 추가
+from kocrd.system.config.config_module import config, get_message  # config import 추가
 from kocrd.managers.document.document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
 from kocrd.system_manager import SystemManager
 from kocrd.system.config.loader import ConfigLoader  # ConfigLoader import 추가

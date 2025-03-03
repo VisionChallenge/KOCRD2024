@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Callable, Dict, Optional, Any, List
 from kocrd.system.system_loder.file_utils import FileManager, show_message_box_safe
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
 import pika

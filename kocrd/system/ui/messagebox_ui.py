@@ -1,7 +1,7 @@
 # kocrd/system/ui/messagebox_ui.py
 from PyQt5.QtWidgets import QMessageBox, QApplication
 import logging
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config
 from kocrd.system.ui import MainWindow
 
 class MessageBoxUI:

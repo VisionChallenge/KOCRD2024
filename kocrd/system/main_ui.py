@@ -5,8 +5,7 @@ from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.menubar_ui import Menubar
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
 from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
-from kocrd.system.config.config import UIConfig
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config, UIConfig
 from kocrd.system.database_manager import DatabaseManager
 from kocrd.system.document_manager import DocumentManager
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -22,6 +21,7 @@ class MainWindow(QMainWindow, QObject):
         self.config = Config(config_file)
         self.database_manager = database_manager or DatabaseManager()
         self.document_manager = document_manager or DocumentManager()
+        self.messages = self.config.get_messages()
         self.init_ui()
 
     def init_ui(self):
