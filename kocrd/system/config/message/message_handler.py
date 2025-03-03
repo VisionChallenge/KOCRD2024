@@ -4,13 +4,11 @@ import logging
 from typing import Callable, Dict, Optional, Any
 import os
 import pika
-
-from kocrd.config.loader import ConfigLoader
-
+from kocrd.system.config.config import Config
 class MessageHandler:
-    def __init__(self, config_loader: ConfigLoader):
-        self.config_loader = config_loader
-        self.message_handlers: Dict[str, Callable[[str, Dict[str, Any]], None]] = {
+    def __init__(self, config):
+        self.config = Config
+        self.message_handlers: Dict[str, Callable[[str, Dict[str, Any]], Optional[str]]] = {
             "MSG": self._handle_message,
             "LOG": self._handle_message,
             "WARN": self._handle_message,
@@ -20,10 +18,11 @@ class MessageHandler:
         }
 
     def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
-        # 메시지 ID에 해당하는 메시지를 반환합니다.
-        return self.config_loader._message(message_id, *args, **kwargs) # ConfigLoader의 _message 사용
-    def _handle_message(self, message_id, data, message_type):
-        self.config_loader.handle_message(message_id, data, message_type)
+        return self.config._message(message_id, *args, **kwargs)
+
+    def _handle_message(self, message_id: str, data: Dict[str, Any]) -> Optional[str]:
+        return self.config.handle_message(message_id, data, "MSG")  # 기본 메시지 타입으로 처리
+
     def process_message(self, ch, method, properties, body):
         try:
             message = json.loads(body)

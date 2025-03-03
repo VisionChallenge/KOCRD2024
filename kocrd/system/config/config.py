@@ -4,12 +4,12 @@ import re
 from typing import Dict, Any, List, Optional
 import os
 import json
-from torch import ge
-from kocrd.system.config.loader import ConfigLoader, get_message
+from kocrd.system.config.loader import ConfigLoader
 from kocrd.system.config.message.message_handler import MessageHandler
 from kocrd.system.system_loder.file_utils import FileManager, show_message_box_safe
 from kocrd.system.temp_file_manager import TempFileManager
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
+
 class RabbitMQConfig:
     def __init__(self, config_loader: ConfigLoader):
         self.host = config_loader.get("rabbitmq.host")
@@ -26,14 +26,34 @@ class FilePathConfig:
         self.temp_files = config_loader.get("file_paths.temp_files")
 
 class UIConfig:
+    window_size_changed = pyqtSignal(str, int, int)
+    splitter_moved = pyqtSignal(float)
     def __init__(self, config_file):
         self.config_file = config_file
         self.config_loader = ConfigLoader(self.config_file)
-
+        self.config = self.load_config()
 
     def get(self, key_path, default=None):
         return self.config_loader.get(key_path, default)
-
+    def get_window_setting(self, setting_type, area=None, key=None):
+        """창 크기 설정을 가져옵니다."""
+        if area and key:
+            return self.config.get(f"window_settings.{setting_type}.{area}.{key}")
+        elif area:
+            return self.config.get(f"window_settings.{setting_type}.{area}")
+        else:
+            return self.config.get(f"window_settings.{setting_type}")
+    def set_window_setting(self, setting_type, area, key, value):
+        """창 크기 설정을 저장합니다."""
+        self.config[f"window_settings.{setting_type}.{area}.{key}"] = value
+        self.save_config()
+    def set_splitter_ratio(self, ratio):
+        """QSplitter 비율을 설정합니다."""
+        self.set_window_setting("current", "document_area", "width_ratio", ratio)
+        self.set_window_setting("current", "monitoring_area", "width_ratio", 1 - ratio)
+    def get_splitter_ratio(self):
+        """QSplitter 비율을 가져옵니다."""
+        return self.get_window_setting("current", "document_area", "width_ratio")
     def load_config(self):
         """UI 설정을 로드합니다."""
         try:
@@ -45,48 +65,11 @@ class UIConfig:
         except json.JSONDecodeError:
             logging.error(f"UI config file '{self.config_file}' is not a valid JSON file.")
             return {}
-    def calculate_module_sizes(self, window_width):
-        """모듈 크기를 계산합니다."""
-        doc_width, _ = self.get_window_size("01_d") or self.get_window_default_size("01_d")
-        mon_width, _ = self.get_window_size("01_mo") or self.get_window_default_size("01_mo")
-        if doc_width and mon_width:
-            total_width = doc_width + mon_width
-            doc_ratio, mon_ratio = doc_width / total_width, mon_width / total_width
-            available_width = window_width - 10
-            new_doc_width = int(available_width * doc_ratio)
-            new_mon_width = int(available_width * mon_ratio)
-            return {"document_width": new_doc_width, "monitoring_width": new_mon_width}
-        return None
-
-
-    def get_window_default_size(self, name):
-        default_size = self.get("default_size", [])
-        for size in default_size:
-            if size.get("name") == name:
-                return size.get("W"), size.get("H")
-        return None, None
-
-    def get_window_size(self, name):
-        window_size = self.get("window_size", [])
-        for size in window_size:
-            if size.get("name") == name:
-                return size.get("W"), size.get("H")
-        return None, None
-
-
-    def set_window_size(self, name, width, height):
-        """사용자 설정 창 크기를 저장합니다."""
-        window_size = self.config.get("window_size", [])
-        for size in window_size:
-            if size.get("name") == name:
-                size["W"] = width
-                size["H"] = height
-                break
-        else:
-            window_size.append({"name": name, "W": width, "H": height})
-        self.config["window_size"] = window_size
-        self.save_config()
-
+    def get_min_size(self):
+        """최소 창 크기를 가져옵니다."""
+        min_width = self.get_window_setting("minimum", "width")
+        min_height = self.get_window_setting("minimum", "height")
+        return min_width if min_width else 500, min_height if min_height else 200
     def save_config(self):
         """UI 설정을 저장합니다."""
         try:
@@ -166,7 +149,16 @@ class Config:
         self.message_box_ui = MessageBoxUI(self)  # MessageBoxUI 인스턴스 생성, Config 인스턴스 전달
 
     def get(self, key_path, default=None):
-        return self.config_loader.get(key_path, default)
+        def _get(data, keys):
+            if not keys:
+                return data
+            key = keys[0]
+            if isinstance(data, dict) and key in data:
+                return _get(data[key], keys[1:])
+            return default
+
+        return _get(self. get, key_path.split("."))
+    
     def validate(self, key_path: str, validator: callable, message: str):
         self.config_loader.validate(key_path, validator, message)
 
@@ -214,12 +206,38 @@ class Config:
             logging.error(f"Message '{type}_{collnumbur}' not found in any language pack.")
             return None  # 또는 기본 메시지 반환
 
+    def _message(self, key: str, *args, **kwargs) -> str:
+        message = self.get_message(key) or "Unknown message"
+        return message.format(*args, **kwargs) if message else "Unknown message"
+    def get_message(self, message_id: str, *args, **kwargs) -> Optional[str]:
+        lang_pack = self.language_packs.get(self.current_language)
+        if not lang_pack:
+            logging.error(f"Language pack for '{self.current_language}' not found.")
+            return None
+        message = lang_pack.get(message_id) or self.messages.get(message_id)
+        if message:
+            return message.format(*args, **kwargs)
+        logging.error(f"Message ID '{message_id}' not found.")
+        return None
 
     def handle_document_exception(self, parent, category, code, exception, additional_message=None):
         return self.config_loader.handle_document_exception(parent, category, code, exception, additional_message)
 
-    def handle_message(self, ch, method, properties, body):
-        return self.config_loader.handle_message(ch, method, properties, body)
+    def handle_message(self, message_id, data, message_type):
+        handlers = {
+            "LOG": logging.info,
+            "WARN": logging.warning,
+            "ERR": logging.error,
+            "ID": logging.info,
+            "MSG": logging.info,
+            "OCR": self._process_ocr_request,
+        }
+        handler = handlers.get(message_type)
+        if handler:
+            message = self._message(message_id, **data)
+            handler(message, data) if message_type == "OCR" else handler(message)
+        else:
+            logging.warning(f"Unknown message type: {message_type}")
 
     def cleanup_all_temp_files(self, retention_time: int = 3600):
         return self.temp_file_manager.cleanup_all_temp_files(retention_time)
