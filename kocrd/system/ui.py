@@ -5,8 +5,7 @@ from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.menubar_ui import Menubar
 from kocrd.system.ui.messagebox_ui import MessageBoxUI
 from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
-from kocrd.system.config.config import UIConfig
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config
 from kocrd.system.ui.menubar_ui import Menubar
 from kocrd.system.database_manager import DatabaseManager
 from kocrd.system.document_manager import DocumentManager
