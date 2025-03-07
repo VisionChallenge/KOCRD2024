@@ -1,20 +1,20 @@
-# Document_Table_View.py
+# kocrd/system/system_loder/document_table_view.py
 from PyQt5.QtWidgets import QTableWidget, QVBoxLayout, QWidget, QTableWidgetItem, QMessageBox
 import logging
 import json
 import os
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
+from kocrd.system.config.config_module import Config  # ConfigLoader import 추가
+from kocrd.system.ui.document_ui import DocumentUI
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
 class DocumentTableView(QWidget):
-    def __init__(self, config_loader: ConfigLoader, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.config_loader = config_loader
-        self.message_handler = MessageHandler(config_loader)  # MessageHandler 인스턴스 생성
+        self.document_ui = DocumentUI
+        self.message_handler = MessageHandler(Config(config_path))  # MessageHandler 인스턴스 생성
         self.table_widget = QTableWidget()
         self.headers = self.config_loader.get("headers")
         self.init_ui()
@@ -55,8 +55,10 @@ class DocumentTableView(QWidget):
 
         return selected_file_names
     def clear_table(self):
-        self.table_widget.setRowCount(0)
+        """테이블 초기화."""
+        self.setRowCount(0)
         logging.info("Document table cleared.")
+
     def filter_table(self, criteria):
         for row in range(self.table_widget.rowCount()):
             match = all(criteria.get(key, "").lower() in self.table_widget.item(row, col).text().lower() for col, key in enumerate(criteria) if self.table_widget.item(row,col) is not None)

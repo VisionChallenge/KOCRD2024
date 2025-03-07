@@ -7,7 +7,7 @@ from datetime import datetime
 from PyQt5.QtWidgets import QInputDialog
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from config.config import config
+from kocrd.system.config.config_module import config
 from utils.embedding_utils import generate_document_type_embeddings
 
 class AIDataManager:

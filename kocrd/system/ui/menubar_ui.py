@@ -3,7 +3,7 @@ import os
 import json
 import logging
 from PyQt5.QtWidgets import QMenuBar, QAction, QMessageBox, QFileDialog, QMenu, QMainWindow, qApp
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config
 from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
 
 class Menubar:

@@ -2,16 +2,51 @@
 import json
 import logging
 from PyQt5.QtWidgets import QProgressBar, QTextEdit, QLineEdit, QListWidget, QVBoxLayout, QWidget, QPushButton
-from kocrd.system.config.config import Config
+from kocrd.system.config.config_module import Config
 
 class MonitoringUI(QWidget):
-    def __init__(self, parent=None, config_path="config/ui.json"):  # config_path 추가
+    def __init__(self, parent=None, config_path="config/ui.json"):
         super().__init__(parent)
         self.config = Config(config_path)  # Config 클래스 사용
         self.init_ui()
+    def init_ui(self):
+        central_widget = QWidget(self.main_window)
+        self.main_window.setCentralWidget(central_widget)
+        central_widget.setLayout(QVBoxLayout())
+
+        splitter = QSplitter(central_widget)
+        central_widget.layout().addWidget(splitter)
+
+        monitoring_ui_widget = self
+        if isinstance(monitoring_ui_widget, QWidget):
+            if monitoring_ui_widget.layout() is None:
+                monitoring_layout = QVBoxLayout()
+                monitoring_ui_widget.setLayout(monitoring_layout)
+            else:
+                monitoring_layout = monitoring_ui_widget.layout()
+            monitoring_layout.addWidget(self.progress_bar)
+            
+            log_display = QTextEdit()
+            log_display.setReadOnly(True)
+            monitoring_layout.addWidget(log_display)
+
+            for widget_config in self.config["monitoring_ui"]["widgets"]:
+                widget = getattr(self.main_window, widget_config["name"])
+                monitoring_layout.addWidget(widget)
+
+        else:
+            logging.error("Monitoring UI is not a QWidget. Cannot add progress bar.")
+
+        splitter.setSizes([1000, 200])
+        logging.info(self.config.coll_text("LOG", "328"))
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.progress_bar)
+        self.log_display = QTextEdit()
+        self.log_display.setReadOnly(True)
+        layout.addWidget(self.log_display)
+        self.setLayout(layout)
 
         # Progress Bar
         self.progress_bar = QProgressBar(self)
@@ -99,36 +134,6 @@ class MonitoringUI(QWidget):
         """파일 테이블을 초기화합니다."""
         self.parent().document_ui.clear_table()
 
-    def init_ui(self):
-        central_widget = QWidget(self.main_window)
-        self.main_window.setCentralWidget(central_widget)
-        central_widget.setLayout(QVBoxLayout())
-
-        splitter = QSplitter(central_widget)
-        central_widget.layout().addWidget(splitter)
-
-        monitoring_ui_widget = self
-        if isinstance(monitoring_ui_widget, QWidget):
-            if monitoring_ui_widget.layout() is None:
-                monitoring_layout = QVBoxLayout()
-                monitoring_ui_widget.setLayout(monitoring_layout)
-            else:
-                monitoring_layout = monitoring_ui_widget.layout()
-            monitoring_layout.addWidget(self.progress_bar)
-            
-            log_display = QTextEdit()
-            log_display.setReadOnly(True)
-            monitoring_layout.addWidget(log_display)
-
-            for widget_config in self.config["monitoring_ui"]["widgets"]:
-                widget = getattr(self.main_window, widget_config["name"])
-                monitoring_layout.addWidget(widget)
-
-        else:
-            logging.error("Monitoring UI is not a QWidget. Cannot add progress bar.")
-
-        splitter.setSizes([1000, 200])
-        logging.info(self.config.coll_text("LOG", "328"))
 
 def setup_monitoring_ui():
     # ...existing code...
