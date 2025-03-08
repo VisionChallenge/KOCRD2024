@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog
 from typing import Union, List, Tuple, Callable, Dict, Optional
 from pika.exceptions import AMQPConnectionError
-from kocrd.system.config.config_module import 
+from kocrd.system.config.config_module import Config
 class SettingsManager:
     """설정 관리 클래스."""
     def __init__(self, config_file="config/development.json"):
@@ -20,9 +20,9 @@ class SettingsManager:
         self.load_from_env()
         self.connection: Optional[pika.BlockingConnection] = None
         self.channel: Optional[pika.channel.Channel] = None  # 채널 타입 명시
-        self.messages_config = load_config("config/messages.json")  # messages.json 로드
-        self.queues_config = load_config("config/queues.json")  # queues.json 로드
-        self.managers_config = load_config("config/managers.json")  # managers.json 로드
+        self.messages_config = ("config/messages.json")  # messages.json 로드
+        self.queues_config = ("config/queues.json")  # queues.json 로드
+        self.managers_config = ("config/managers.json")  # managers.json 로드
 
     def load_config(self):
         """JSON 설정 파일을 로드합니다."""
@@ -125,24 +125,19 @@ class SettingsManager:
         except Exception as e:
             logging.error(f"설정 파일 저장 오류: {e}")
 
-    def get_setting_path(self, setting_name: str) -> Union[str, None]:
-        """경로 관련 설정을 반환합니다."""
+    def get_setting_path(self, setting_name: str) -> Union[str, None]: #경로 관련 설정을 반환합니다
         return self.get_setting(setting_name)
-
-    def get_temp_dir(self) -> str:
-        """임시 디렉토리 경로를 반환합니다."""
+    def get_temp_dir(self) -> str: #임시 디렉토리 경로를 반환합니다
         return self.get_setting("temp_dir")
 
-    def set_temp_dir(self, temp_dir: str) -> None:
-        """임시 디렉토리 경로를 설정합니다."""
+    def set_temp_dir(self, temp_dir: str) -> None: #임시 디렉토리 경로를 설정합니다.
         self.set_setting("temp_dir", temp_dir)
         logging.info(f"Temporary directory set to {temp_dir}")
 
-    def open_settings_dialog(self, parent=None):
-        """설정 다이얼로그를 엽니다."""
+    def open_settings_dialog(self, parent=None): #설정 다이얼로그를 엽니다
         logging.info(f"Opening settings dialog. Parent: {parent}")
-        from Settings.SettingsDialogUI.SettingsDialogUI import SettingsDialogUI
-        dialog = SettingsDialogUI(settings_manager=self, parent=parent)
+        from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
+        dialog = Preferenceswindow(settings_manager=self, parent=parent)
         dialog.exec_()
 
     def set_file_path(self, parent, setting_name: str, file_filter: str = "All Files (*)",

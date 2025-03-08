@@ -6,13 +6,11 @@ import shutil
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
+from kocrd.system.config.config_module import Config
 
 class DocumentTempManager:
-    def __init__(self, config_loader: ConfigLoader):
-        self.config_loader = config_loader
-        self.message_handler = MessageHandler(config_loader)  # MessageHandler 인스턴스 생성
+    def __init__(self, ):
+        self.config = Config
         self.temp_files = []
         self.temp_dir = tempfile.mkdtemp()
         self.backup_dir = os.path.join(self.temp_dir, "backup")
@@ -52,7 +50,7 @@ class DocumentTempManager:
                 file_path = os.path.join(self.temp_dir, filename)
                 backup_path = os.path.join(self.backup_dir, filename) # 백업 경로 설정
                 if os.path.isfile(file_path):
-                    if not self.config_loader.handle_file_operation("copy", file_path, destination=backup_path): # 변경
+                    if not self.config.handle_file_operation("copy", file_path, destination=backup_path): # 변경
                         return False # 백업 실패 시 False 반환
             logging.info("Temporary files backed up.")
             return True

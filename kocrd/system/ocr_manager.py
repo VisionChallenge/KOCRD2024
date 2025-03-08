@@ -13,31 +13,27 @@ from PyQt5.QtWidgets import QMessageBox
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
 from kocrd.system.system_loder.ocr_utils import OCRHelper
-from Settings.settings_manager import SettingsManager
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.config.config import get_temp_dir
-
-# managers_config.json 파일 로드
-config_loader = ConfigLoader(os.path.join(os.path.dirname(__file__), '../managers_config.json'))
-managers_config = config_loader.config
+from kocrd.system.settings_manager import SettingsManager
+from kocrd.system.config.config_module import Config, MessageType
+from kocrd.system.main_ui import MainWindow
 
 class OCRManager:
     """OCR 작업을 처리하는 클래스."""
-    def __init__(self, tesseract_cmd: Optional[str], tessdata_dir: Optional[str], settings_manager: SettingsManager, monitoring_window: Any = None):
+    def __init__(self, tesseract_cmd: Optional[str], tessdata_dir: Optional[str], monitoring_window: Any = None):
         self.monitoring_window = monitoring_window
         self.tesseract_cmd = tesseract_cmd
         self.tessdata_dir = tessdata_dir
-        self.settings_manager = settings_manager
-        self.progress_bar = monitoring_window.progress_bar if monitoring_window else None
+        self.settings_manager = SettingsManager
+        self.progress_bar = MainWindow.progress_bar
         self.temp_dir = get_temp_dir()
-        self.config_loader = config_loader
-
+        self.config = Config("config/development.json")
+        managers_config = self.config.managers_config("config/managers.json")
         if self.tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = self.tesseract_cmd
         if self.tessdata_dir:
             os.environ["TESSDATA_PREFIX"] = self.tessdata_dir
             self.log("info", "320", self.tessdata_dir=self.tessdata_dir)
-        self.log("info", "319", self.tesseract_cmd=self.tesseract_cmd)
+        self.log("info", "319", self.tesseract_cmd = self.tesseract_cmd)
 
         # 시스템 매니저와 프로그레스바 초기화 확인
         if self.monitoring_window:
@@ -49,15 +45,8 @@ class OCRManager:
             self.log("warning", "408")
 
     def log(self, level: str, code: str, **kwargs) -> None:
-        """간략화된 로깅."""
-        message = self.config_loader.get_message(level, code).format(**kwargs)
-        getattr(logging, level)(message)
-
-    def show_message(self, level: str, code: str) -> None:
-        """간략화된 메시지 박스."""
-        message = self.config_loader.get_message(level, code)
-        if level == "warning":
-            QMessageBox.warning(self.monitoring_window, "오류", message)
+        message = self.config.link_text_processor("LOG", MessageType.LOG, code).format(**kwargs)
+        logging.log(level, message)
 
     def start_scan(self, file_paths: List[str]) -> Optional[List[str]]:
         """문서 스캔 시작."""
@@ -159,8 +148,7 @@ class OCRManager:
             self.log("error", "501", e=e)
             return None
 
-    def find_poppler_path(self) -> Optional[str]:
-        """Poppler 경로를 찾습니다."""
+    def find_poppler_path(self) -> Optional[str]: #Poppler 경로를 찾습니다
         return self.settings_manager.get_setting_path("POPPLER_PATH")
 
     def request_temp_files(self, file_path: str, callback: Optional[Callable] = None) -> Any:
@@ -172,7 +160,22 @@ class OCRManager:
             self.log("error", "509")
             return None
         return self.monitoring_window.system_manager.send_temp_file_message("create_temp_files", file_path=file_path, callback=callback)
-
+    def save_ocr_images(self, pdf_file_path): #PDF 파일에서 OCR 이미지를 추출하고 저장합니다
+        logging.info(self.message_handler.get_message("log.506", pdf_file_path=pdf_file_path))
+        try:
+            poppler_path = self.ocr_manager.find_poppler_path()
+            if not poppler_path:
+                raise FileNotFoundError("Poppler 경로를 찾을 수 없습니다.")
+            images = convert_from_path(pdf_file_path, poppler_path=poppler_path)
+            for i, image in enumerate(images):
+                image_path = f"{pdf_file_path}_page_{i + 1}.png"
+                image.save(image_path)
+                logging.info(f"OCR image saved: {image_path}")
+        except FileNotFoundError as e:
+            logging.error(self.message_handler.get_message("error.501", e=e))
+        except Exception as e:
+            self.config.link_text_processor("520","ERR", exception=e)
+            raise
     def save_page_as_image(self, page: Image.Image, page_num: int) -> Optional[str]:
         """PDF 페이지를 임시 이미지로 저장."""
         try:

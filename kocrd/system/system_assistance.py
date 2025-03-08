@@ -13,7 +13,6 @@ from PyQt5.QtGui import QCursor
 import logging
 from typing import Dict, Any, Optional
 from kocrd.system.config.config_module import Config
-from kocrd.config.message.message_handler import MessageHandler
 from kocrd.managers.rabbitmq_manager import RabbitMQManager
 from kocrd.system.ai_model_manager import AIModelManager
 from kocrd.utils.embedding_utils import EmbeddingUtils

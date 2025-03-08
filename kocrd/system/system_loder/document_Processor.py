@@ -146,22 +146,7 @@ class DocumentProcessor:
             logging.error(self.message_handler.get_message("error.520", error=e))
             return "Unknown"
 
-    def save_ocr_images(self, pdf_file_path):
-        """PDF 파일에서 OCR 이미지를 추출하고 저장합니다."""
-        logging.info(self.message_handler.get_message("log.506", pdf_file_path=pdf_file_path))
-        try:
-            poppler_path = self.ocr_manager.find_poppler_path()
-            if not poppler_path:
-                raise FileNotFoundError("Poppler 경로를 찾을 수 없습니다.")
-            images = convert_from_path(pdf_file_path, poppler_path=poppler_path)
-            for i, image in enumerate(images):
-                image_path = f"{pdf_file_path}_page_{i + 1}.png"
-                image.save(image_path)
-                logging.info(f"OCR image saved: {image_path}")
-        except FileNotFoundError as e:
-            logging.error(self.message_handler.get_message("error.501", e=e))
-        except Exception as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))
+
 
     def batch_import_documents(self):
         """문서를 일괄적으로 가져오고 처리합니다."""

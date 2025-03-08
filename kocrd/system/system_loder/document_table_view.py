@@ -4,7 +4,6 @@ import logging
 import json
 import os
 from kocrd.system.config.config_module import Config  # ConfigLoader import 추가
-from kocrd.system.ui.document_ui import DocumentUI
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -13,10 +12,8 @@ with open(config_path, 'r', encoding='utf-8') as f:
 class DocumentTableView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.document_ui = DocumentUI
         self.message_handler = MessageHandler(Config(config_path))  # MessageHandler 인스턴스 생성
         self.table_widget = QTableWidget()
-        self.headers = self.config_loader.get("headers")
         self.init_ui()
         logging.info("DocumentTableView initialized.")
     def init_ui(self):
@@ -31,6 +28,9 @@ class DocumentTableView(QWidget):
             item = QTableWidgetItem(str(document_info.get(header, "")))
             self.table_widget.setItem(row, col, item)
         logging.info(f"Document added to table: {document_info}")
+    def sort_table(self):
+        self.table_widget.sortItems(0)
+        logging.info("Document table sorted.")
     def filter_table(self, criteria):
         """기준에 따라 테이블 필터링."""
         for row in range(self.table_widget.rowCount()):  # 괄호 닫기
@@ -56,21 +56,9 @@ class DocumentTableView(QWidget):
         return selected_file_names
     def clear_table(self):
         """테이블 초기화."""
-        self.setRowCount(0)
+        self.table_widget.setRowCount(0)
         logging.info("Document table cleared.")
 
-    def filter_table(self, criteria):
-        for row in range(self.table_widget.rowCount()):
-            match = all(criteria.get(key, "").lower() in self.table_widget.item(row, col).text().lower() for col, key in enumerate(criteria) if self.table_widget.item(row,col) is not None)
-            self.table_widget.setRowHidden(row, not match)
-        logging.info("Document table filtered.")
-    def reset_table(self):
-        """
-        테이블 초기화. 모든 행을 제거.
-        """
-        self.table_widget.setRowCount(0)
-        logging.info("Document table reset.")
-        QMessageBox.information(self, "테이블 초기화", "모든 문서가 초기화되었습니다.")
     def set_headers(self, headers):
         """
         테이블 헤더를 동적으로 설정.

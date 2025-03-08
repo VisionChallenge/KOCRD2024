@@ -92,11 +92,22 @@ class LanguageController:
         else:
             logging.warning(f"Language code '{language_code}' not found.")
 
-    def get_message(self, message_id: str, message_type: MessageType):
+    def get_message(self, group: str, message_type: MessageType, coll_num: str):
+        """
+        그룹, 메시지 타입, coll_num을 기반으로 메시지를 검색합니다.
+
+        :param group: 메시지가 속한 그룹 (예: "UI", "messages")
+        :param message_type: 메시지 타입 (MessageType enum)
+        :param coll_num: 메시지의 coll_num (예: "001", "202")
+        :return: 검색된 메시지 또는 오류 메시지
+        """
         lang_pack = self.language_packs.get(self.current_language)
         if lang_pack:
-            messages = lang_pack.get("messages", {}).get(message_type, {})
-            return messages.get(message_id, f"Message '{message_type}_{message_id}' not found.")
+            try:
+                messages = lang_pack[group][message_type.value]
+                return messages.get(coll_num, f"Message '{group}.{message_type.value}.{coll_num}' not found.")
+            except KeyError:
+                return f"Group '{group}' or message type '{message_type.value}' not found."
         return f"Language pack for '{self.current_language}' not found."
 
     def determine_language(self, preferred_language=None):
@@ -105,10 +116,9 @@ class LanguageController:
         return list(self.language_packs.keys())[0] if self.language_packs else "en"
 
 class MessageHandler:
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.config = Config
         self.language_controller = LanguageController()
-        self.main_window = MainWindow()
         self.message_handlers = {
             MessageType.ERR: self._handle_error_message,
             MessageType.WARN: self._handle_warning_message,
@@ -119,53 +129,70 @@ class MessageHandler:
             MessageType.OCR: self._handle_ocr_message,
         }
 
-    def handle_message(self, message_id: str, message_type: MessageType, data: dict = None):
+    def handle_message(self, group: str, message_id: str, message_type: MessageType, data: dict = None):
         handler = self.message_handlers.get(message_type)
         if handler:
-            handler(message_id, data)
+            handler(group, message_id, data)
         else:
             logging.warning(f"알 수 없는 메시지 타입: {message_type}")
 
-    def _handle_error_message(self, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(message_id, MessageType.ERR)
-        self.main_window.show_error_message(message)
+    def _handle_error_message(self, group: str, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(group, MessageType.ERR, message_id)
+        message = self._format_message(message, data)
+        if hasattr(self, 'main_window') and self.main_window:
+            self.main_window.show_error_message(message)
         logging.error(message)
 
-    def _handle_warning_message(self, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(message_id, MessageType.WARN)
-        self.main_window.show_warning_message(message)
+    def _handle_warning_message(self, group: str, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(group, MessageType.WARN, message_id)
+        message = self._format_message(message, data)
+        if hasattr(self, 'main_window') and self.main_window:
+            self.main_window.show_warning_message(message)
         logging.warning(message)
 
-    def _handle_log_message(self, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(message_id, MessageType.LOG)
+    def _handle_log_message(self, group: str, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(group, MessageType.LOG, message_id)
+        message = self._format_message(message, data)
         logging.info(message)
 
-    def _handle_message(self, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(message_id, MessageType.MSG)
+    def _handle_message(self, group: str, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(group, MessageType.MSG, message_id)
+        message = self._format_message(message, data)
         logging.info(message)
 
-    def _handle_ui_message(self, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(message_id, MessageType.UI)
+    def _handle_ui_message(self, group: str, message_id: str, data: dict = None):
+        return self.language_controller.get_message(group, MessageType.UI, message_id)
+
+    def _handle_ocr_message(self, group: str, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(group, MessageType.OCR, message_id)
+        message = self._format_message(message, data)
+        logging.info(message)
+
+    def _format_message(self, message: str, data: dict = None):
+        if data:
+            try:
+                message = message.format(**data)
+            except KeyError as e:
+                logging.warning(f"메시지 포맷 오류: {e}")
         return message
 
-    def _handle_ocr_message(self, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(message_id, MessageType.OCR)
-        # OCR 메시지 처리 로직 구현
-        logging.info(message)
+    def set_main_window(self, main_window: MainWindow):
+        self.main_window = main_window
+
 
 class Config:
     def __init__(self, config_file):
         self.config_file = config_file
         self.config_data = self.load_and_merge([config_file, "config/queues.json", "kocrd/config/message/messages.json"])
+        self.managers_config = self.config_data.get("managers_config", {})
         self.temp_dir = self.config_data.get("file_paths", {}).get("temp_files")
         self.backup_dir = os.path.join(self.temp_dir, "backup")
         os.makedirs(self.backup_dir, exist_ok=True)
         self.file_manager = FileManager(self.temp_dir, self.backup_dir, [])
         self.language_controller = LanguageController()
-        self.message_handler = MessageHandler(self)
+        self.message_handler = MessageHandler()
         self.rabbitmq = RabbitMQConfig(self)
         self.file_paths = FilePathConfig(self)
-        self.ui = None  # UIConfig 삭제
         self.managers = {}
         self.manager_instances = {}
         self.initialize_managers()
@@ -192,6 +219,11 @@ class Config:
             log_message = message.format(error=exception)
             logging.error(log_message)
             show_message_box_safe(message.format(error=exception), "오류")
+        else:
+            message_type == MessageType.LOG and logging.info and logging.log(message_id, message_type, data)
+            message = self.language_controller.get_message(message_id, MessageType.LOG)
+        if message_type == MessageType.UI:
+            self.message_handler.handle_message(message_id, MessageType.UI, data)
         else:
             self.message_handler.handle_message(message_id, message_type, data)
 
@@ -252,42 +284,28 @@ class Config:
         """AI 모델 실행 프로세스 트리거"""
         manager = self.manager_instances.get(process_type)
         if manager:
-            try:
-                manager.handle_process(data)
-            except Exception as e:
-                self.link_text_processor("517", MessageType.ERR, exception=e, additional_message=f"프로세스 '{process_type}' 실행 실패")
+            try: manager.handle_process(data)
+            except Exception as e: self.link_text_processor("517", MessageType.ERR, exception=e, additional_message=f"프로세스 '{process_type}' 실행 실패")
         elif process_type == "database_packaging":
             if hasattr(self, "temp_file"):
-                try:
-                    self.temp_file.database_packaging()
-                except Exception as e:
-                    self.link_text_processor("519", MessageType.ERR, exception=e, additional_message="데이터베이스 패키징 실패")
-            else:
-                self.link_text_processor("509", MessageType.ERR, exception="temp_file 매니저 인스턴스 없음")
+                try: self.temp_file.database_packaging()
+                except Exception as e: self.link_text_processor("519", MessageType.ERR, exception=e, additional_message="데이터베이스 패키징 실패")
+            else: self.link_text_processor("509", MessageType.ERR, exception="temp_file 매니저 인스턴스 없음")
         elif process_type == "ai_training":
             if hasattr(self, "ai_training"):
-                try:
-                    self.ai_training.request_ai_training(data)
-                except Exception as e:
-                    self.link_text_processor("518", MessageType.ERR, exception=e, additional_message="AI 학습 요청 실패")
-        else:
-            self.link_text_processor("524", MessageType.ERR, exception="ai_training 매니저 인스턴스 없음")
+                try: self.ai_training.request_ai_training(data)
+                except Exception as e: self.link_text_processor("518", MessageType.ERR, exception=e, additional_message="AI 학습 요청 실패")
+            else: self.link_text_processor("524", MessageType.ERR, exception="ai_training 매니저 인스턴스 없음")
         elif process_type == "generate_text":
             if hasattr(self, "ai_prediction"):
-                try:
-                    return self.ai_prediction.generate_text(data.get("command", ""))
-                except Exception as e:
-                    self.link_text_processor("520", MessageType.ERR, exception=e, additional_message="텍스트 생성 실패")
-            else:
-                self.link_text_processor("524", MessageType.ERR, exception="ai_prediction 매니저 인스턴스 없음")        
-        else:
-            self.link_text_processor("404", MessageType.WARN, exception=f"알 수 없는 프로세스 유형: {process_type}")
+                try: return self.ai_prediction.generate_text(data.get("command", ""))
+                except Exception as e: self.link_text_processor("520", MessageType.ERR, exception=e, additional_message="텍스트 생성 실패")
+            else: self.link_text_processor("524", MessageType.ERR, exception="ai_prediction 매니저 인스턴스 없음")
 
     def get_setting(self, setting_path):
         return self.get(setting_path)
-    def create_ocr_engine(self, engine_type: str):
+    def create_ocr_engine(self, engine_type: str): # OCR 엔진 생성 로직
         try:
-            # OCR 엔진 생성 로직
             pass
         except Exception as e:
             self.link_text_processor("516", MessageType.ERR, exception=e, additional_message=f"OCR 엔진 생성 실패: {engine_type}")
@@ -361,6 +379,15 @@ class Config:
         except OSError as e:
             self.link_text_processor("507", MessageType.ERR, exception=e, additional_message="임시 파일 정리 실패")
             return False
+
+    def send_message(self, message):
+        """지정된 큐에 메시지를 전송합니다."""
+        try:
+            queue_name = QUEUES["document_queue"]
+            self.message_queue_manager.send_message(queue_name, message)
+            logging.info(f"Message sent to queue '{queue_name}': {message}")
+        except Exception as e:
+            logging.error(self.message_handler.get_message("error.520", error=e))
 
     @handle_db_exception
     def execute_and_log(self, engine, query, params, success_message):
