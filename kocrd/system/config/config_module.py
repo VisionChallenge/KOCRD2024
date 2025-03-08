@@ -171,7 +171,9 @@ class Config:
         self.initialize_managers()
         self.temp_file_manager = TempFileManager(self.file_manager)
         self.message_box_ui = MessageBoxUI(self)
+
     def load_and_merge(self, config_files):
+        """설정 파일을 로드하고 병합합니다."""
         config_data = {}
         for file_path in config_files:
             try:
@@ -179,8 +181,21 @@ class Config:
                     file_data = json.load(f)
                     config_data.update(file_data)
             except (FileNotFoundError, json.JSONDecodeError) as e:
-                logging.error(f"Error loading config file {file_path}: {e}")
+                self.link_text_processor("config_file_load_failed", MessageType.ERR, exception=e, additional_message=f"설정 파일 로드 실패: {file_path}")
         return config_data
+
+    def link_text_processor(self, message_id: str, message_type: MessageType, data: dict = None, exception=None, additional_message=None):
+        """메시지 처리 요청을 MessageHandler에 전달하는 중계자 역할"""
+        if message_type == MessageType.ERR and exception:
+            message = self.language_controller.get_message(message_id, MessageType.ERR)
+            if additional_message:
+                message += f" - {additional_message}"
+            log_message = message.format(error=exception)
+            logging.error(log_message)
+            show_message_box_safe(message.format(error=exception), "오류")
+        else:
+            self.message_handler.handle_message(message_id, message_type, data)
+
     def initialize_database(self, engine):
         try:
             config = self.get("database.init_queries")
@@ -190,8 +205,9 @@ class Config:
                     conn.execute(query)
             logging.info("데이터베이스 초기화 성공")
         except (SQLAlchemyError, IOError, KeyError) as e:
-            self.handle_error("db_init_fail", "508", exception=e, additional_message="데이터베이스 초기화 실패")
+            self.link_text_processor("db_init_fail", MessageType.ERR, exception=e, additional_message="데이터베이스 초기화 실패")
             raise RuntimeError("Database initialization failed.") from e
+
     def get(self, key_path, default=None):
         keys = key_path.split(".")
         data = self.config_data
@@ -201,14 +217,10 @@ class Config:
             else:
                 return default
         return data
-    def validate(self, key_path, validator, message):
-        value = self.get(key_path)
-        if not validator(value):
-            raise ValueError(message)
+
     def set_language(self, language):
         self.language_controller.set_language(language)
-    def send_text(self, message_id: str, message_type: MessageType, data: dict = None):
-        self.message_handler.handle_message(message_id, message_type, data)
+
     def _process_ocr_request(self, message, data):
         file_path = data.get("file_path")
         logging.info(message)
@@ -231,64 +243,72 @@ class Config:
                 self.manager_instances[manager_name] = instance
                 setattr(self, manager_name, instance)
             except ImportError as e:
-                logging.error(f"모듈 임포트 오류: {module_path} - {e}")
+                self.link_text_processor("manager_import_error", MessageType.ERR, exception=e, additional_message=f"매니저 '{manager_name}' 모듈 임포트 오류: {module_path}")
             except AttributeError as e:
-                logging.error(f"클래스 속성 오류: {class_name} in {module_path} - {e}")
+                self.link_text_processor("manager_attribute_error", MessageType.ERR, exception=e, additional_message=f"매니저 '{manager_name}' 클래스 속성 오류: {class_name} in {module_path}")
             except Exception as e:
-                logging.error(f"매니저 초기화 오류: {e}")
+                self.link_text_processor("manager_initialization_error", MessageType.ERR, exception=e, additional_message=f"매니저 '{manager_name}' 초기화 오류")
+
     def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
         """AI 모델 실행 프로세스 트리거"""
         manager = self.manager_instances.get(process_type)
         if manager:
-            manager.handle_process(data)
+            try:
+                manager.handle_process(data)
+            except Exception as e:
+                self.link_text_processor("process_execution_failed", MessageType.ERR, exception=e, additional_message=f"프로세스 '{process_type}' 실행 실패")
         elif process_type == "database_packaging":
             if hasattr(self, "temp_file"):
-                self.temp_file.database_packaging()
+                try:
+                    self.temp_file.database_packaging()
+                except Exception as e:
+                    self.link_text_processor("database_packaging_failed", MessageType.ERR, exception=e, additional_message="데이터베이스 패키징 실패")
             else:
-                logging.error("temp_file 매니저 인스턴스 없음")
+                self.link_text_processor("missing_temp_file_manager", MessageType.ERR, exception="temp_file 매니저 인스턴스 없음")
         elif process_type == "ai_training":
             if hasattr(self, "ai_training"):
-                self.ai_training.request_ai_training(data)
-            else:
-                logging.error("ai_training 매니저 인스턴스 없음")
+                try:
+                    self.ai_training.request_ai_training(data)
+                except Exception as e:
+                    self.link_text_processor("ai_training_failed", MessageType.ERR, exception=e, additional_message="AI 학습 요청 실패")
+        else:
+            self.link_text_processor("missing_ai_training_manager", MessageType.ERR, exception="ai_training 매니저 인스턴스 없음")
         elif process_type == "generate_text":
             if hasattr(self, "ai_prediction"):
-                return self.ai_prediction.generate_text(data.get("command", ""))
+                try:
+                    return self.ai_prediction.generate_text(data.get("command", ""))
+                except Exception as e:
+                    self.link_text_processor("text_generation_failed", MessageType.ERR, exception=e, additional_message="텍스트 생성 실패")
             else:
-                logging.error("ai_prediction 매니저 인스턴스 없음")
+                self.link_text_processor("missing_ai_prediction_manager", MessageType.ERR, exception="ai_prediction 매니저 인스턴스 없음")
         else:
-            logging.warning(f" 알 수 없는 프로세스 유형: {process_type}")
-    def handle_error(self, category, code, exception, additional_message=None):
-        message_id = f"{category}_{code}"
-        error_message = self.config_data.get("messages", {}).get(message_id, "알 수 없는 오류")
-        if additional_message:
-            error_message += f" - {additional_message}"
-        log_message = error_message.format(error=exception)
-        logging.error(log_message)
-        show_message_box_safe(error_message.format(error=exception), "오류")
-    def handle_document_exception(self, parent, category, code, exception, additional_message=None):
-        message_id = f"{category}_{code}"
-        error_message = self.config_data.get("messages", {}).get(message_id, "알 수 없는 오류")
-        if additional_message:
-            error_message += f" - {additional_message}"
-        log_message = error_message.format(error=exception)
-        logging.error(log_message)
-        show_message_box_safe(error_message.format(error=exception), "오류")
-        return log_message
+            self.link_text_processor("unknown_process_type", MessageType.WARN, exception=f"알 수 없는 프로세스 유형: {process_type}")
+
     def get_setting(self, setting_path):
         return self.get(setting_path)
     def create_ocr_engine(self, engine_type: str):
-        pass
+        try:
+            # OCR 엔진 생성 로직
+            pass
+        except Exception as e:
+            self.link_text_processor("ocr_engine_creation_failed", MessageType.ERR, exception=e, additional_message=f"OCR 엔진 생성 실패: {engine_type}")
+            return None
+
     def create_ai_model(self, model_type: str):
-        # AI 모델 생성 로직 구현 (현재는 pass)
-        pass
+        try:
+            # AI 모델 생성 로직
+            pass
+        except Exception as e:
+            self.link_text_processor("ai_model_creation_failed", MessageType.ERR, exception=e, additional_message=f"AI 모델 생성 실패: {model_type}")
+            return None
+
     def load_tensorflow_model(self, model_path):
         try:
             model = tf.keras.models.load_model(model_path)
             logging.info(f"TensorFlow 모델 로딩 완료: {model_path}")
             return model
         except Exception as e:
-            self.handle_error("model_load_error", "505", exception=e, additional_message=f"TensorFlow 모델 로드 실패: {model_path}")
+            self.link_text_processor("model_load_error", MessageType.ERR, exception=e, additional_message=f"TensorFlow 모델 로드 실패: {model_path}")
             return None
     def load_gpt_model(self, gpt_model_path):
         try:
@@ -298,7 +318,7 @@ class Config:
             logging.info(f"GPT 모델 로딩 완료: {gpt_model_path}")
             return tokenizer, gpt_model
         except Exception as e:
-            self.handle_error("gpt_model_load_error", "505", exception=e, additional_message=f"GPT 모델 로드 실패: {gpt_model_path}")
+            self.link_text_processor("gpt_model_load_error", MessageType.ERR, exception=e, additional_message=f"GPT 모델 로드 실패: {gpt_model_path}")
             return None, None
     def handle_file_operation(self, operation: str, file_path: str, content=None, destination=None, file_type: str = "auto"):
         file_handlers = {
@@ -311,32 +331,56 @@ class Config:
         }
         handler = file_handlers.get(operation)
         if handler:
-            return handler()
+            try:
+                return handler()
+            except Exception as e:
+                self.link_text_processor("file_operation_failed", MessageType.ERR, exception=e, additional_message=f"파일 작업 '{operation}' 실패: {file_path}")
+                return False
         else:
-            self.handle_error("error", "507", exception=f"Unsupported operation: {operation}")
+            self.link_text_processor("unsupported_file_operation", MessageType.ERR, exception=f"지원하지 않는 파일 작업: {operation}")
             return False
+
     def handle_db_exception(self, func):
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
             except SQLAlchemyError as e:
-                logging.error(f"Database error: {e}")
+                self.link_text_processor("database_error", MessageType.ERR, exception=e, additional_message="데이터베이스 오류 발생")
                 raise
         return wrapper
+
     def cleanup_all_temp_files(self, retention_time: int = 3600):
-        return self.temp_file_manager.cleanup_all_temp_files(retention_time)
+        try:
+            return self.temp_file_manager.cleanup_all_temp_files(retention_time)
+        except OSError as e:
+            self.link_text_processor("temp_file_cleanup_failed", MessageType.ERR, exception=e, additional_message="임시 파일 정리 실패")
+            return False
+
     def cleanup_specific_files(self, files: Optional[List[str]]):
-        return self.temp_file_manager.cleanup_specific_files(files)
+        try:
+            return self.temp_file_manager.cleanup_specific_files(files)
+        except OSError as e:
+            self.link_text_processor("temp_file_cleanup_failed", MessageType.ERR, exception=e, additional_message="임시 파일 정리 실패")
+            return False
+
     @handle_db_exception
     def execute_and_log(self, engine, query, params, success_message):
-        with engine.connect() as conn:
-            conn.execute(query, params)
-        logging.info(success_message)
+        try:
+            with engine.connect() as conn:
+                conn.execute(query, params)
+            logging.info(success_message)
+        except SQLAlchemyError as e:
+            self.link_text_processor("database_query_failed", MessageType.ERR, exception=e, additional_message="데이터베이스 쿼리 실패")
+            raise
 
     @handle_db_exception
     def execute_and_fetch(self, engine, query, error_message, params=None):
-        """쿼리를 실행하고 결과를 반환합니다."""
-        with engine.connect() as conn:
-            result = conn.execute(query, params or {})
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(query, params or {})
             return [dict(row) for row in result]
+        except SQLAlchemyError as e:
+            self.link_text_processor("database_query_failed", MessageType.ERR, exception=e, additional_message="데이터베이스 쿼리 실패")
+            raise
+
 config = Config("config/development.json")

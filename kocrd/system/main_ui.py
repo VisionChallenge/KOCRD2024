@@ -1,4 +1,4 @@
-# kocrd/system/ui.py
+# kocrd/system/main_ui.py
 from PyQt5.QtWidgets import QMainWindow, QMessageBox, QSplitter
 from kocrd.system.ui.document_ui import DocumentUI
 from kocrd.system.ui.monitoring_ui import MonitoringUI
@@ -9,6 +9,8 @@ from kocrd.system.database_manager import DatabaseManager
 from kocrd.system.document_manager import DocumentManager
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, Qt
 import json
+
+from tool.Sentence_Transformer.numpy._core.tests.test_scalarinherit import C
 
 class MainWindow(QMainWindow, QObject):
     document_updated = pyqtSignal(str, int)
@@ -22,6 +24,7 @@ class MainWindow(QMainWindow, QObject):
         self.database_manager = database_manager or DatabaseManager()
         self.document_manager = document_manager or DocumentManager()
         self.messages = self.config.language_controller.messages()
+        self.message_box = MessageBox(self.config)
         self.init_ui()
 
     def init_ui(self):
@@ -110,27 +113,10 @@ class MainWindow(QMainWindow, QObject):
     def show_preferences_window(self):
         self.preferences_window.show()
 
-    def show_error_message(self, message):
-        QMessageBox.critical(None, self.config.language_controller.get_message("UI", "012"), message)
-
-    def show_question_message(self, message):
-        reply = QMessageBox.question(None, self.config.language_controller.get_message("UI", "010"), message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        return reply
-
-    def show_information_message(self, message):
-        QMessageBox.information(None, self.config.language_controller.get_message("UI", "006"), message)
-
-    def show_warning_message(self, message):
-        QMessageBox.warning(None, self.config.language_controller.get_message("UI", "011"), message)
-
-    def show_confirmation_message(self, message):
-        reply = QMessageBox.question(None, self.config.language_controller.get_message("UI", "011"), message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        return reply == QMessageBox.Yes
-
     def delete_document(self, database_manager):
         selected_items = self.document_ui.table_widget.selectedItems()
         if not selected_items:
-            self.show_warning_message(self.config.language_controller.get_message("MSG", "208"))
+            self.message_box.show_warning_message(self.config.language_controller.get_message("MSG", "208"))
             return
 
         selected_row = selected_items[0].row()
@@ -151,19 +137,19 @@ class MainWindow(QMainWindow, QObject):
     def execute_action(self, action, confirmation_key=None, success_key=None, error_key=None, **kwargs):
         if confirmation_key:
             message = self.config.language_controller.get_message("MSG", confirmation_key).format(**kwargs)
-            if not self.show_confirmation_message(message):
+            if not self.message_box.show_confirmation_message(message):
                 return
 
         try:
             result = action() if callable(action) else None
             if success_key:
                 message = self.config.language_controller.get_message("MSG", success_key).format(**kwargs)
-                self.show_information_message(message)
+                self.message_box.show_information_message(message)
             return result
         except Exception as e:
             logging.error(f"Error: {e}")
             message = self.config.language_controller.get_message("ERR", error_key).format(error=e)
-            self.show_error_message(message)
+            self.message_box.show_error_message(message)
 
     def get_window_setting(self, setting_type, area=None, key=None):
         with open("config/ui.json", "r", encoding="utf-8") as f:
@@ -210,3 +196,24 @@ class MainWindow(QMainWindow, QObject):
         document_width = int(window_width * document_ratio)
         monitoring_width = int(window_width * monitoring_ratio)
         return {"document_width": document_width, "monitoring_width": monitoring_width}
+
+class MessageBox:
+    def __init__(self, config):
+        self.config = Config
+
+    def show_error_message(self, message):
+        QMessageBox.critical(None, self.config.language_controller.get_message("UI", "012"), message)
+
+    def show_question_message(self, message):
+        reply = QMessageBox.question(None, self.config.language_controller.get_message("UI", "010"), message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        return reply
+
+    def show_information_message(self, message):
+        QMessageBox.information(None, self.config.language_controller.get_message("UI", "006"), message)
+
+    def show_warning_message(self, message):
+        QMessageBox.warning(None, self.config.language_controller.get_message("UI", "011"), message)
+
+    def show_confirmation_message(self, message):
+        reply = QMessageBox.question(None, self.config.language_controller.get_message("UI", "011"), message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        return reply == QMessageBox.Yes
