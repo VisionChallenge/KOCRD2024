@@ -6,8 +6,9 @@ import os
 import pika
 import pytesseract
 from typing import Dict, Any, Optional
-from PyQt5.QtWidgets import QMessageBox, QApplication
+from PyQt5.QtWidgets import QMessageBox, QApplication, QMenu  # QMenu 추가
 from PIL import Image, UnidentifiedImageError  # PIL import 위치 변경
+from PyQt5.QtGui import QCursor
 
 import logging
 from typing import Dict, Any, Optional

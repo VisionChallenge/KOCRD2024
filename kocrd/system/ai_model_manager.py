@@ -91,6 +91,21 @@ class AIModelManager:
             self.config_loader.handle_error(self.system_manager, "gpt_text_generation_error", "505", error=e)
             return "GPT 텍스트 생성 오류"
 
+    def generate_ai_response(self, message):
+        """AI 응답 생성."""
+        try:
+            input_ids = self.tokenizer.encode(message, return_tensors="pt")
+            pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+            attention_mask = (input_ids != pad_token_id).long()
+            output = self.gpt_model.generate(
+                input_ids=input_ids, attention_mask=attention_mask,
+                max_new_tokens=100, pad_token_id=pad_token_id
+            )
+            return self.tokenizer.decode(output[0], skip_special_tokens=True)
+        except Exception as e:
+            self.config.link_text_processor("ERR", "520")  # "AI 응답 처리 중 오류가 발생했습니다."
+            return "AI 응답 처리 중 오류가 발생했습니다."
+
     def save_generated_text_to_db(self, file_name: str, text: str):
         """생성된 텍스트를 데이터베이스에 저장."""
         if not self.database_manager:

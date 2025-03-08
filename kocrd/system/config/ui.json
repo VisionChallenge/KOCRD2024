@@ -1,22 +1,25 @@
 {
   "window_settings": {
-    "default": {
-      "main_window": {"width": 1200, "height": 800},
-      "document_area": {"width_ratio": 0.7},
-      "monitoring_area": {"width_ratio": 0.3}
+    "DEFAULT": {
+      "MW": {"W": 1200, "H": 800},
+      "D_A": {"W_RAT": 0.7},
+      "monitoring_area": {"W_RAT": 0.3}
     },
-    "current": {
-      "main_window": {"width": 1200, "height": 800},
-      "document_area": {"width_ratio": 0.7},
-      "monitoring_area": {"width_ratio": 0.3}
+    "W_COL": {
+      "MW": {"W": 1200, "H": 800},
+      "D_A": {"W_RAT": 0.7},
+      "monitoring_area": {"W_RAT": 0.3}
     },
-    "minimum": {"width": 500, "height": 200}
+    "MIN": {"W": 500, "H": 200}
   },
-  "table_columns": [
-    {"name": "파일명", "order": 0, "W": 200},
-    {"name": "유형", "order": 1, "W": 100},
-    {"name": "날짜", "order": 2, "W": 150},
-    {"name": "크기", "order": 3, "W": 100},
-    {"name": "확장자", "order": 4, "W": 100}
+  "Default_column": [
+    {"name": "파일명", "order": 0, "W": 200, "sort": true, "coll": true, "clear": false},
+    {"name": "유형", "order": 1, "W": 100, "sort": true, "coll": true, "clear": true},
+    {"name": "날짜", "order": 2, "W": 150, "sort": true, "coll": true, "clear": true},
+    {"name": "크기", "order": 3, "W": 100, "sort": true, "coll": true, "clear": false},
+    {"name": "확장자", "order": 4, "W": 100, "sort": true, "coll": true, "clear": false}
+  ],
+  "create_colum": [
+    {"name": "기업", "order": 0, "W": 200, "sort": false, "coll": true, "clear": true}
   ]
 }

@@ -1,5 +1,5 @@
 # kocrd/system/main_ui.py
-from PyQt5.QtWidgets import QMainWindow, QMessageBox, QSplitter
+from PyQt5.QtWidgets import QMainWindow, QMessageBox, QSplitter, QProgressBar, QStatusBar
 from kocrd.system.ui.document_ui import DocumentUI
 from kocrd.system.ui.monitoring_ui import MonitoringUI
 from kocrd.system.ui.menubar_ui import Menubar
@@ -25,6 +25,8 @@ class MainWindow(QMainWindow, QObject):
         self.document_manager = document_manager or DocumentManager()
         self.messages = self.config.language_controller.messages()
         self.message_box = MessageBox(self.config)
+        self.statusbar = QStatusBar(self)
+        self.setStatusBar(self.statusbar)
         self.init_ui()
 
     def init_ui(self):
@@ -42,6 +44,12 @@ class MainWindow(QMainWindow, QObject):
         self.splitter.addWidget(self.monitoring_ui)
         self.setCentralWidget(self.splitter)
 
+        self.status_bar = self.statusBar()
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setMaximumWidth(self.width() * 0.3)
+        self.status_bar.addPermanentWidget(self.progress_bar)
+        self.progress_bar.setVisible(False)
+
         self.document_updated.connect(self.handle_document_update)
         self.progress_changed.connect(self.handle_progress_change)
         self.window_size_changed.connect(self.handle_window_size_changed)
@@ -50,8 +58,8 @@ class MainWindow(QMainWindow, QObject):
 
     def restore_window_size(self):
         """창 크기 및 QSplitter 비율을 복원합니다."""
-        main_width = self.get_window_setting("current", "main_window", "width")
-        main_height = self.get_window_setting("current", "main_window", "height")
+        main_width = self.get_window_setting("W_COL", "MW", "W")
+        main_height = self.get_window_setting("W_COL", "MW", "H")
         if main_width and main_height:
             self.resize(main_width, main_height)
 
@@ -67,8 +75,8 @@ class MainWindow(QMainWindow, QObject):
     def resizeEvent(self, event):
         """창 크기 변경 시 크기를 저장합니다."""
         size = event.size()
-        self.set_window_setting("current", "main_window", "width", size.width())
-        self.set_window_setting("current", "main_window", "height", size.height())
+        self.set_window_setting("W_COL", "MW", "W", size.width())
+        self.set_window_setting("W_COL", "MW", "H", size.height())
         self.resize_ui_modules(size.width())
 
     def set_window_size(self):
@@ -93,6 +101,11 @@ class MainWindow(QMainWindow, QObject):
 
     @pyqtSlot(str, int)
     def handle_progress_change(self, text, number):
+        if number == 0:
+            self.progress_bar.setVisible(False)
+        else:
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setValue(number)
         print(f"진행률 변경 신호 수신: {text}, {number}")
         # 진행률 업데이트 처리
 
@@ -151,15 +164,21 @@ class MainWindow(QMainWindow, QObject):
             message = self.config.language_controller.get_message("ERR", error_key).format(error=e)
             self.message_box.show_error_message(message)
 
-    def get_window_setting(self, setting_type, area=None, key=None):
+    def get_config_value(self, *keys):
         with open("config/ui.json", "r", encoding="utf-8") as f:
             config = json.load(f)
+        value = config
+        for key in keys:
+            value = value.get(key, {})
+        return value
+
+    def get_window_setting(self, setting_type, area=None, key=None):
         if area and key:
-            return config.get("window_settings", {}).get(setting_type, {}).get(area, {}).get(key)
+            return self.get_config_value("window_settings", setting_type, area, key)
         elif area:
-            return config.get("window_settings", {}).get(setting_type, {}).get(area)
+            return self.get_config_value("window_settings", setting_type, area)
         else:
-            return config.get("window_settings", {}).get(setting_type)
+            return self.get_config_value("window_settings", setting_type)
 
     def set_window_setting(self, setting_type, area, key, value):
         with open("config/ui.json", "r", encoding="utf-8") as f:
@@ -169,25 +188,25 @@ class MainWindow(QMainWindow, QObject):
             json.dump(config, f, ensure_ascii=False, indent=4)
 
     def set_splitter_ratio(self, ratio):
-        self.set_window_setting("current", "document_area", "width_ratio", ratio)
-        self.set_window_setting("current", "monitoring_area", "width_ratio", 1 - ratio)
+        self.set_window_setting("W_COL", "D_A", "W_RAT", ratio)
+        self.set_window_setting("W_COL", "monitoring_area", "W_RAT", 1 - ratio)
 
     def get_splitter_ratio(self):
-        return self.get_window_setting("current", "document_area", "width_ratio")
+        return self.get_window_setting("W_COL", "D_A", "W_RAT")
 
     def get_min_size(self):
-        min_width = self.get_window_setting("minimum", "width")
-        min_height = self.get_window_setting("minimum", "height")
+        min_width = self.get_window_setting("MIN", "W")
+        min_height = self.get_window_setting("MIN", "H")
         return min_width if min_width else 500, min_height if min_height else 200
 
     def get_window_size(self, key):
-        width = self.get_window_setting("current", key, "width")
-        height = self.get_window_setting("current", key, "height")
+        width = self.get_window_setting("W_COL", key, "W")
+        height = self.get_window_setting("W_COL", key, "H")
         return width, height
 
     def get_window_default_size(self, key):
-        width = self.get_window_setting("default", key, "width")
-        height = self.get_window_setting("default", key, "height")
+        width = self.get_window_setting("DEFAULT", key, "W")
+        height = self.get_window_setting("DEFAULT", key, "H")
         return width, height
 
     def calculate_module_sizes(self, window_width):
