@@ -13,6 +13,7 @@ class Menubar:
         self.preferenceswindow = Preferenceswindow(self.parent)
         self.setup_menus()
         self.parent.setMenuBar(self.menu_bar)
+        self.addAction = QMenu.addAction
 
     def setup_menus(self):
         """메뉴바 설정."""

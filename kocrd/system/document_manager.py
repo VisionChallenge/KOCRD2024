@@ -1,5 +1,6 @@
 # kocrd\system\document_manager.py
 
+from calendar import c
 import os
 import pika
 import json
@@ -19,7 +20,6 @@ from kocrd.system.system_assistance import SystemManager
 
 config_path = os.path.join(os.path.dirname(__file__), 'Document_config.json')
 message_handler = MessageHandler(config_path)  # MessageHandler 인스턴스 생성
-config_loader = ConfigLoader(config_path)  # ConfigLoader 인스턴스 생성
 
 MAX_FILE_SIZE = config_loader.get_config()["MAX_FILE_SIZE"]
 MESSAGE_QUEUE = config_loader.get_config()["MESSAGE_QUEUE"]
@@ -29,7 +29,7 @@ LOGGING_INFO = config_loader.get_config()["logging"]["info"]
 LOGGING_WARNING = config_loader.get_config()["logging"]["warning"]
 LOGGING_ERROR = config_loader.get_config()["logging"]["error"]
 
-from ...kocrd.managers.document.document_controller import DocumentController
+from kocrd.system.system_loder.document_controller import DocumentController
 from .document_table_view import DocumentTableView # 상대 경로 import
 from .document_processor import DocumentProcessor # 상대 경로 import
 from .document_temp import DocumentTempManager  # DocumentTempManager 임포트 추가
@@ -89,6 +89,10 @@ class DocumentManager(QWidget):
     def delete_document(self, file_name):
         """문서를 데이터베이스에서 삭제."""
         self.database_manager.delete_document(file_name)
+
+    def import_documents(self):
+        """문서 가져오기."""
+        DocumentController.import_documents(self)
 
     def load_documents(self):
         """저장된 문서 정보를 로드."""
