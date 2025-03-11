@@ -21,6 +21,14 @@ class DocumentTableView(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.table_widget)
         self.setLayout(layout)
+    def is_match_found(self, keyword, cell_text, match_exact):
+        """셀 텍스트에서 키워드가 존재하는지 확인"""
+        keyword_lower = keyword.lower()
+        cell_text_lower = cell_text.lower()
+
+        if match_exact:
+            return cell_text_lower == keyword_lower
+        return keyword_lower in cell_text_lower
     def add_document(self, document_info):
         row = self.table_widget.rowCount()
         self.table_widget.insertRow(row)
@@ -37,6 +45,24 @@ class DocumentTableView(QWidget):
             match = all(criteria[key] in self.table_widget.item(row, col).text() for col, key in enumerate(criteria))
             self.table_widget.setRowHidden(row, not match)
         logging.info("Document table filtered.")
+    def get_table_data(self, include_headers=False):
+        """DocumentTableView의 데이터를 2D 리스트 형태로 반환 (헤더 포함 여부 선택 가능)"""
+        data = []
+        headers = self.headers  # DocumentTableView의 headers 속성 사용
+        if headers is None:  # 헤더가 없을 경우 처리
+            headers = []
+
+        for row in range(self.table_widget.rowCount()):
+            row_data = []
+            for col in range(self.table_widget.columnCount()):
+                item = self.table_widget.item(row, col)
+                row_data.append(item.text() if item is not None else "")  # item이 None인 경우 "" 추가
+            data.append(row_data)
+
+        if include_headers:
+            return headers, data
+        else:
+            return data
     def get_selected_file_names(self):
         selected_items = self.table_widget.selectedItems()
         if not selected_items:

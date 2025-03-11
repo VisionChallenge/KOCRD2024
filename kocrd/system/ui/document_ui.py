@@ -1,74 +1,56 @@
 # kocrd/system/ui/document_ui.py
 import logging
 import json
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QAction, QTextEdit, QProgressBar, QTableWidget, QHeaderView, QMessageBox, QInputDialog,  QListWidget, QTableWidgetItem, QMenu, QLayout
-from cv2 import add
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QTextEdit, QProgressBar, QTableWidget, QHeaderView, QMessageBox, QInputDialog, QTableWidgetItem
 from kocrd.system.document_manager import DocumentManager
 from kocrd.system.database_manager import DatabaseManager
-from kocrd.system.main_ui import MainWindow, MessageBox
+from kocrd.system.main_ui import MainWindow
 from kocrd.system.config.config_module import Config, LanguageController
-from PyQt5.QtCore import Qt,pyqtSignal
-from PyQt5.QtGui import QCursor
 
 class DocumentUI(QWidget):
-    def __init__(self, main_window: MainWindow, database_manager: DatabaseManager):
+    def __init__(self, main_window: MainWindow, config: Config, database_manager: DatabaseManager, document_manager: DocumentManager, message_box: MessageBoxUI, LanguageController: LanguageController):
         super().__init__()
         self.main_window = main_window
         self.table_widget = None
+        self.document_manager = document_manager
         self.progress_bar = QProgressBar(main_window)
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        self.message_box = MessageBox(self.config)
-        self.document_manager = DocumentManager(main_window, database_manager,)
-        self.config = Config("config/ui.json")
-        self.language_controller = LanguageController()
-        self.factionsList = QListWidget()
-        self.import_documents =DocumentManager.import_documents
-        self.clear_table = DocumentManager.clear_table
-        self.sort_table = DocumentManager.sort_table
+        self.config = Config
         self.init_ui()
 
-
     def init_ui(self):
-        self.layout = QLayout
-        self.table_widget = self.create_table_widget()
-        self.layout.addWidget(self.table_widget)
-        self.setLayout(self.layout)
-        self.table_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # table_widget에 컨텍스트 메뉴 설정
-        self.table_widget.customContextMenuRequested.connect(self.handle_click_event) # table_widget에 시그널 연결
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.create_table_widget())
+        self.setLayout(layout)
 
     def create_table_widget(self):
         """문서 테이블 생성."""
-        table_widget = QTableWidget()
-        columns = self.config.get("Default_column", [])
-        table_widget.setColumnCount(len(columns))
-        table_widget.setHorizontalHeaderLabels([self.config.language_controller.get_message(f"column.{col['order']:03d}", "UI") for col in columns])
-        
-        header = table_widget.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table_widget = QTableWidget()
+        self.table_widget.setColumnCount(len(self.config.get("table_columns", [])))
+        self.table_widget.setHorizontalHeaderLabels([col["name"] for col in self.config.get("table_columns", [])])
+
+        header = self.table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
         header.setStretchLastSection(True)
-        return table_widget
 
+        return self.table_widget
 
-    def handle_click_event(self, pos):
-        menu = QMenu(self.table_widget) # table_widget를 메뉴에 전달
-        if self.table_widget.rowCount() == 0:  # 테이블이 비어 있는지 확인
-            self.D_UI_Menu_L(menu)
-        else:
-            self.D_UI_Menu_T(menu)
-        menu.exec_(self.table_widget.mapToGlobal(pos)) # table_widget에 상대적 좌표를 절대적 좌표로 변환
+    def clear_table(self):
+        """파일 테이블을 초기화합니다."""
+        self.document_manager.clear_table()
+        logging.info(self.message_handler.get_message("MSG", "203"))
 
-    def D_UI_Menu_L(self, menu: QMenu):
-        """빈 레이아웃일 때의 메뉴 항목을 추가합니다."""
-        menu.addAction(self.language_controller.get_message("017", "UI")).triggered.connect(self.action1_triggered) # 열추가
-        menu.addAction(self.language_controller.get_message("018", "UI")).triggered.connect(self.sort_table) # 정렬
-        menu.addAction(self.language_controller.get_message("013", "UI")).triggered.connect(self.clear_table) # 초기화
-        menu.addAction(self.language_controller.get_message("015", "UI")).triggered.connect(self.import_documents) # 파일가져오기
+    def update_document_info(self):
+        """선택된 문서의 정보를 업데이트합니다."""
+        selected_items = self.document_manager.get_selected_items()
+        if not selected_items:
+            self.main_window.message_box.show_warning_message(self.message_handler.get_message("MSG", "208"))
+            return
 
-    def action1_triggered(self):
-        self.add_column()
+        selected_row = selected_items[0].row()
+        current_file_name = self.document_manager.get_item_text(selected_row, 0)
+        new_type, ok = QInputDialog.getText(self, "문서 유형 수정", f"{current_file_name}의 새로운 문서 유형을 입력하세요:")
+        if ok and new_type:
+            self.document_manager.update_document_type(current_file_name, new_type, selected_row)
 
-    def D_UI_Menu_T(self, menu: QMenu):
-        """table_widget일 때의 메뉴 항목을 추가합니다."""
-        menu.addAction(self.language_controller.get_message("018", "UI")).triggered.connect(self.sort_table) # 정렬
-        menu.addAction(self.language_controller.get_message("019", "UI")).triggered.connect(self.action3_triggered) # 열선택

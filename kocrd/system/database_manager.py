@@ -8,16 +8,15 @@ from datetime import datetime
 from sqlalchemy.orm import declarative_base
 import pika
 import json
-from kocrd.config.loader import ConfigLoader
-from kocrd.config.message.message_handler import MessageHandler
-from kocrd.utils.database_utils import execute_and_log, execute_and_fetch
+from kocrd.system.config.config_module import Config, MessageHandler
+from kocrd.system.system_loder.file_utils import execute_and_log, execute_and_fetch
 
 
 class DatabaseManager:
-    def __init__(self, config_loader: ConfigLoader):
-        self.config_loader = config_loader
-        self.db_path = self.config_loader.get_file_paths().get("db_path")
-        self.backup_path = self.config_loader.get_file_paths().get("backup_path")
+    def __init__(self, config: Config):
+        self.config = config
+        self.db_path = self.config.get_file_paths().get("db_path")
+        self.backup_path = self.config.get_file_paths().get("backup_path")
         if self.backup_path:
             logging.info(f"Backup path set to: {self.backup_path}")
         self.db_file = os.path.join(self.db_path, "documents.db")

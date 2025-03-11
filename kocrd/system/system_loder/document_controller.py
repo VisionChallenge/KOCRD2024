@@ -6,10 +6,9 @@ import json
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget, QVBoxLayout
 import pandas as pd
 from fpdf import FPDF
-from kocrd.managers.document.document_table_view import DocumentTableView
+from kocrd.system.system_loder.document_table_view import DocumentTableView
 from kocrd.system.document_manager import DocumentManager
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
+from kocrd.system.config.config_module import Config, MessageHandler  # MessageHandler import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -181,3 +180,8 @@ class DocumentController(QWidget):
             logging.info(f"Message sent to queue '{queue_name}': {message}")
         except Exception as e:
             logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
+
+    def load_document(self, file_path):
+        document_info = self.document_processor.process_single_document(file_path)
+        if document_info:
+            self.document_table_view.add_document(document_info)

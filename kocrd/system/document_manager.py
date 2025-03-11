@@ -44,7 +44,6 @@ class DocumentManager(QWidget):
         QMessageBox.critical(parent, "오류", error_message.format(error=exception))
 
     def show_message(self, parent, title, message):
-        """메시지를 표시합니다."""
         QMessageBox.information(parent, title, message)
 
     def update_document_type(self, current_file_name, new_type, selected_row): #문서 유형을 업데이트
@@ -65,43 +64,12 @@ class DocumentManager(QWidget):
             self.config.link_text_processor("520","ERR", exception=e)
             raise
 
-    def start_consuming(self):
-        """메시지 큐에서 메시지 소비 시작."""
-        self.message_queue_manager.start_consuming()
-
-    def load_document(self, file_path):
-        document_info = self.document_processor.process_single_document(file_path)
-        if document_info:
-            self.document_table_view.add_document(document_info)
-
     def is_match_found(self, keyword, cell_text, match_exact):
-        """셀 텍스트에서 키워드가 존재하는지 확인"""
-        keyword_lower = keyword.lower()
-        cell_text_lower = cell_text.lower()
-
-        if match_exact:
-            return cell_text_lower == keyword_lower
-        return keyword_lower in cell_text_lower
-
+        return self.document_table_view.is_match_found(keyword, cell_text, match_exact)
     def get_table_data(self, include_headers=False):
-        """DocumentTableView의 데이터를 2D 리스트 형태로 반환 (헤더 포함 여부 선택 가능)"""
-        data = []
-        headers = self.document_table_view.headers  # DocumentTableView의 headers 속성 사용
-        if headers is None:  # 헤더가 없을 경우 처리
-            headers = []
-
-        for row in range(self.document_table_view.table_widget.rowCount()):
-            row_data = []
-            for col in range(self.document_table_view.table_widget.columnCount()):
-                item = self.document_table_view.table_widget.item(row, col)
-                row_data.append(item.text() if item is not None else "")  # item이 None인 경우 "" 추가
-            data.append(row_data)
-
-        if include_headers:
-            return headers, data
-        else:
-            return data
-
+        return self.document_table_view.get_table_data(include_headers)
+    def start_consuming(self): #메시지 큐에서 메시지 소비 시작.
+        self.message_queue_manager.start_consuming()
     def save_document_info(self, document_info): #문서 정보를 데이터베이스에 저장
         return self.database_manager.save_document_info(document_info)
     def add_document_to_table(self, document_info):
@@ -140,6 +108,8 @@ class DocumentManager(QWidget):
         return self.document_controller.search_documents(keyword, column_index, match_exact)
     def save_feedback(self, feedback_data):
         return self.database_manager.save_feedback(feedback_data)
+    def load_document(self, file_path):
+        self.document_controller.load_document(file_path)
 
 def process_document_task(ch, method, properties, body):
     message = json.loads(body)
