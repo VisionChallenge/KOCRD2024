@@ -26,7 +26,8 @@ def load_Functions( function_name: str, *args, **kwargs):
 		"TempFile": TempFileManager,
 		"SystemAssistance": SystemAssistance,
 		"ConfigLoader": config_loader,
-  
+	}
+
 def process_message(process_func):
 	"""메시지를 처리하는 공통 함수"""
 	def wrapper(channel, method, properties, body, system_manager: SystemManager):  # system_manager 타입 힌트 추가
@@ -207,7 +208,7 @@ class SystemManager:
 	def get_message(self, message_type: str, message_code: str) -> str:
 		"""메시지 설정에서 메시지를 가져옵니다."""
 		try:
-			messages = self.config_manager.get("messages", {}) # default 값으로 빈 딕셔너리 지정
+			messages = self.config_manager.get("messages", {})
 			return messages[message_type][message_code]
 		except KeyError:
 			logging.error(f"Message not found: {message_type} - {message_code}")

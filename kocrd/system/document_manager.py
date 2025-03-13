@@ -14,8 +14,8 @@ from pdf2image import convert_from_path
 from typing import List, Optional
 from kocrd.system.config.config_module import Config
 from kocrd.system.system_loder.document_table_view import DocumentTableView
-from kocrd.system.system_loder.document_action import DocumentController
-from kocrd.system.system_loder.document_background_system import DocumentProcessor
+from kocrd.system.system_loder.document_action import DocumentAction
+from kocrd.system.system_loder.document_background_system import DocumentBackgroundSystem
 from kocrd.system.system_loder.document_temp import DocumentTempManager
 from kocrd.system.ocr_manager import OCRManager
 from kocrd.system.database_manager import DatabaseManager
@@ -27,9 +27,9 @@ class DocumentManager(QWidget):
         self.message_queue_manager = message_queue_manager
         self.ocr_manager = OCRManager()
         self.temp_file_manager = DocumentTempManager()  # DocumentTempManager 인스턴스 생성
-        self.document_processor = DocumentProcessor(database_manager, parent, self, message_queue_manager)
+        self.document_processor = DocumentAction(database_manager, parent, self, message_queue_manager)
         self.document_table_view = DocumentTableView(self)
-        self.document_controller = DocumentController(self.document_processor, parent, self)
+        self.document_controller = DocumentBackgroundSystem(self.document_processor, parent, self)
         self.database_manager = DatabaseManager()
         self.config = Config() # config 객체 가져오기
 

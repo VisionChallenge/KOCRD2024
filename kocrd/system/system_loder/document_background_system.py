@@ -1,5 +1,4 @@
-# file_name: Document_Processor.py
-
+# kocrd/system/system_loader/document_background_system.py 파일 수정
 import os
 import logging
 import datetime
@@ -8,10 +7,7 @@ from fpdf import FPDF
 from pdf2image import convert_from_path
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 import mimetypes
-from sqlalchemy.exc import SQLAlchemyError
-from kocrd.config import development
-from kocrd.config.loader import ConfigLoader  # ConfigLoader import 추가
-from kocrd.config.message.message_handler import MessageHandler  # MessageHandler import 추가
+
 
 # 설정 파일을 호출하도록 수정
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
@@ -29,11 +25,7 @@ LOGGING_INFO = config["messages"]["log"]
 LOGGING_WARNING = config["messages"]["warning"]
 LOGGING_ERROR = config["messages"]["error"]
 
-class DocumentProcessor:
-    """
-    문서 처리 로직을 담당하는 클래스.
-    OCR 수행, 데이터베이스 저장 등의 기능을 제공합니다.
-    """
+class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스. OCR 수행, 데이터베이스 저장 등의 기능을 제공합니다.
     def __init__(self, database_manager, ocr_manager, parent, system_manager, message_queue_manager):
         self.message_queue_manager = message_queue_manager
         self.system_manager = system_manager
@@ -145,8 +137,6 @@ class DocumentProcessor:
         except Exception as e:
             logging.error(self.message_handler.get_message("error.520", error=e))
             return "Unknown"
-
-
 
     def batch_import_documents(self):
         """문서를 일괄적으로 가져오고 처리합니다."""
