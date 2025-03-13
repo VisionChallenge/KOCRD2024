@@ -1,4 +1,4 @@
-# kocrd/managers/document/document_controller.py
+# kocrd/managers/document/document_action.py
 
 import logging
 import os
@@ -9,7 +9,7 @@ from fpdf import FPDF
 from kocrd.system.system_loder.document_table_view import DocumentTableView
 from kocrd.system.document_manager import DocumentManager
 from kocrd.system.config.config_module import Config, MessageHandler  # MessageHandler import 추가
-
+from kocrd.system.system_assistance import SystemAssistance
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
@@ -30,7 +30,7 @@ class DocumentController(QWidget):
         self.document_processor = document_processor
         self.parent = parent
         self.system_manager = system_manager
-        self.message_queue_manager = system_manager.message_queue_manager # message_queue_manager 추가
+        self.message_queue_manager = SystemAssistance.message_queue_manager # message_queue_manager 추가
         self.document_table_view = DocumentTableView(self)
         self.document_manager = DocumentManager(self.system_manager, self.parent, self.message_queue_manager)
         self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성

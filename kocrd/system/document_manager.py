@@ -14,7 +14,7 @@ from pdf2image import convert_from_path
 from typing import List, Optional
 from kocrd.system.config.config_module import Config
 from kocrd.system.system_loder.document_table_view import DocumentTableView
-from kocrd.system.system_loder.document_controller import DocumentController
+from kocrd.system.system_loder.document_action import DocumentController
 from kocrd.system.system_loder.document_processor import DocumentProcessor
 from kocrd.system.system_loder.document_temp import DocumentTempManager
 from kocrd.system.ocr_manager import OCRManager

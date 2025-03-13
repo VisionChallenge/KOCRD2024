@@ -40,7 +40,8 @@ class SystemAssistance:
     def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
         """AI 모델 실행 프로세스 트리거"""
         return self.config.trigger_process(process_type, data)
-
+    def message_queue_manager():
+        
     def handle_message(self, ch, method, properties, body):
         """RabbitMQ 메시지를 처리합니다."""
         self.config.handle_message(ch, method, properties, body)
