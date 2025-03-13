@@ -25,18 +25,19 @@ LOGGING_INFO = config["messages"]["log"]
 LOGGING_WARNING = config["messages"]["warning"]
 LOGGING_ERROR = config["messages"]["error"]
 
-class DocumentController(QWidget):
-    def __init__(self, document_processor, parent, system_manager): # system_manager 추가
+class DocumentAction(QWidget):
+    def __init__(self, document_processor, parent, system_manager):
         self.document_processor = document_processor
         self.parent = parent
         self.system_manager = system_manager
         self.message_queue_manager = SystemAssistance.message_queue_manager # message_queue_manager 추가
         self.document_table_view = DocumentTableView(self)
-        self.document_manager = DocumentManager(self.system_manager, self.parent, self.message_queue_manager)
-        self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
-        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 인스턴스 생성
+        self.document_manager = DocumentBackgroundSystem(self.system_manager, self.parent, self.message_queue_manager)
+        self.config = Config()
+        self.message_handler = MessageHandler(self.config)
         self.init_ui()
-        logging.info("DocumentController initialized.")
+        logging.info("DocumentAction initialized.")
+
     def init_ui(self):
         layout = QVBoxLayout()
         layout.addWidget(self.document_table_view)
