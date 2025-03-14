@@ -6,7 +6,7 @@ import shutil
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-from kocrd.system.config.config_module import Config
+from kocrd.system_manager.config.config_module import Config
 
 class DocumentTempManager:
     def __init__(self, ):

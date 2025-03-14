@@ -12,11 +12,11 @@ from PyQt5.QtGui import QCursor
 
 import logging
 from typing import Dict, Any, Optional
-from kocrd.system.config.config_module import Config
+from kocrd.system_manager.config.config_module import Config
 from kocrd.managers.rabbitmq_manager import RabbitMQManager
-from kocrd.system.ai_model_manager import AIModelManager
+from kocrd.system_manager.ai_model_manager import AIModelManager
 from kocrd.utils.embedding_utils import EmbeddingUtils
-from kocrd.system.manager_factory import ManagerFactory  # ManagerFactory import 추가
+from kocrd.system_manager.manager_factory import ManagerFactory  # ManagerFactory import 추가
 
 
 class SystemAssistance:
@@ -41,20 +41,6 @@ class SystemAssistance:
         """AI 모델 실행 프로세스 트리거"""
         return self.config.trigger_process(process_type, data)
     def message_queue_manager():
-        
-    def handle_message(self, ch, method, properties, body):
-        """RabbitMQ 메시지를 처리합니다."""
-        self.config.handle_message(ch, method, properties, body)
-
-    def handle_error(self, message, error_message_key=None):
-        self.config.handle_error("system", "error", message, error_message_key)
-
-    def run_embedding_generation(self):
-        EmbeddingUtils.run_embedding_generation(self.config_loader)
-
-    def close_rabbitmq_connection(self):
-        self.rabbitmq_manager.close()
-
     def get_manager(self, manager_name: str) -> Optional[Any]:
         return self.managers.get(manager_name)
 
@@ -62,4 +48,4 @@ class SystemAssistance:
         return self.config
 
 # main_window 모듈을 나중에 임포트
-from kocrd.system.main_window import MainWindow
+from kocrd.system_manager.main_window import MainWindow

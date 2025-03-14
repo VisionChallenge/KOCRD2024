@@ -1,5 +1,5 @@
-from kocrd.system.database_manager import DatabaseManager
-from kocrd.system.ocr_manager import OCRManager
+from kocrd.system_manager.database_manager import DatabaseManager
+from kocrd.system_manager.ocr_manager import OCRManager
 from kocrd.managers.temp_file_manager import TempFileManager
 from kocrd.managers.ai_managers.ai_training_manager import AITrainingManager
 

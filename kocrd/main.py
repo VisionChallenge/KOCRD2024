@@ -8,12 +8,12 @@ import os
 # 프로젝트 루트 디렉토리를 sys.path에 추가
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-import system
+import system_manager
 
 def run_worker():
     """Worker 프로세스를 실행하는 함수."""
-    import system
-    system.main()
+    import system_manager
+    system_manager.main()
 
 def get_required_setting(settings, key, error_message):
     value = settings.get(key)
@@ -30,7 +30,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     app = QApplication(sys.argv)
     try:
-        settings_manager, config = system.SystemManager.initialize_settings("config/development.json")
+        settings_manager, config = system_manager.SystemManager.initialize_settings("config/development.json")
     except Exception as e:
         logging.critical(f"Failed to initialize settings: {e}")
         return
@@ -53,7 +53,7 @@ def main():
         tesseract_cmd = get_required_setting(ocr_kwargs, constants.get("TESSERACT_CMD_KEY", ""), f"Critical error: '{constants.get('TESSERACT_CMD_KEY', '')}' not found in ocr_kwargs")
         tessdata_dir = get_required_setting(ocr_kwargs, constants.get("TESSDATA_DIR_KEY", ""), f"Critical error: '{constants.get('TESSDATA_DIR_KEY', '')}' not found in ocr_kwargs")
         ai_event_manager = AIEventManager(system_manager, settings_manager, model_manager, ai_data_manager, error_handler, config.queues["queues"])  # queues 전달, config.queues -> config.queues["queues"]로 변경
-        system_manager = system.SystemManager(settings_manager, None, tesseract_cmd, tessdata_dir)
+        system_manager = system_manager.SystemManager(settings_manager, None, tesseract_cmd, tessdata_dir)
 
         try:
             ai_model_manager = system_manager.get_manager("ai_model")
@@ -72,7 +72,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        settings_manager, config = system.SystemManager.initialize_settings()
+        settings_manager, config = system_manager.SystemManager.initialize_settings()
         main()
     except KeyError as e:
         logging.critical(f"Configuration error: {e}")

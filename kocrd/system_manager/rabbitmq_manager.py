@@ -92,5 +92,6 @@ class RabbitMQManager:
             self.connection.close()
             logging.info("🟢 RabbitMQ 연결 종료.")
 
+
     def __del__(self): # RabbitMQManager 객체가 사라질때 close() 호출
         self.close()

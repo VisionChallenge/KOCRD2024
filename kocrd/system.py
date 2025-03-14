@@ -6,14 +6,14 @@ import pytesseract
 from typing import Dict, Any, Optional
 from PyQt5.QtWidgets import QMessageBox
 
-from system.database_manager import DatabaseManager
-from system.ocr_manager import OCRManager
-from system.settings_manager import SettingsManager
-from system.document_manager import DocumentManager
-from system.temp_file_manager import TempFileManager
-from system.system_assistance import Systemassistance
-from kocrd.system.config import ConfigManager
-from kocrd.system.config import message_handler
+from system_manager.database_manager import DatabaseManager
+from system_manager.ocr_manager import OCRManager
+from system_manager.settings_manager import SettingsManager
+from system_manager.document_manager import DocumentManager
+from system_manager.temp_file_manager import TempFileManager
+from system_manager.system_assistance import Systemassistance
+from kocrd.system_manager.config.config_module import Config 
+from kocrd.system_manager.config import message_handler
 
 
 def load_Functions( function_name: str, *args, **kwargs):    
@@ -25,7 +25,7 @@ def load_Functions( function_name: str, *args, **kwargs):
 		"Document": DocumentManager,
 		"TempFile": TempFileManager,
 		"SystemAssistance": SystemAssistance,
-		"ConfigLoader": config_loader,
+		"Config": Config,
 	}
 
 def process_message(process_func):
@@ -98,7 +98,7 @@ def create_manager(manager_config, settings_manager):
 	return manager_class(settings_manager, **kwargs)
 class SystemManager:
 	def __init__(self, settings_path="config/development.json", main_window=None, tesseract_cmd=None, tessdata_dir=None, settings_manager=None): # settings_manager 인자 추가
-		self.config_manager = ConfigManager(settings_path)  # ConfigManager 인스턴스 생성
+		self.config = Config(settings_path)  # ConfigManager 인스턴스 생성
 		self.settings = self.config_manager.get("settings")  # 설정 로드
 		self.settings_manager = settings_manager  # settings_manager 할당
 		self.main_window = main_window  # MainWindow 인스턴스 설정
@@ -141,7 +141,7 @@ class SystemManager:
 		return DatabaseManager(self.settings_manager.get_setting("db_path"), self.settings_manager.get_setting("backup_path"))
 
 	def create_ai_model_manager(self):
-		from kocrd.system.ai_model_manager import AIModelManager
+		from kocrd.system_manager.ai_model_manager import AIModelManager
 		return AIModelManager(self.settings_manager)  # AIModelManager 생성
 
 	def get_temp_file_manager(self):
@@ -204,7 +204,6 @@ class SystemManager:
 			else:
 				logging.warning(self.get_message("warning", "404").format(process_type=process_type)) # self.get_message 추가
 				QMessageBox.warning(self.main_window, "오류", self.get_message("warning", "404").format(process_type=process_type)) # self.get_message 추가
-
 	def get_message(self, message_type: str, message_code: str) -> str:
 		"""메시지 설정에서 메시지를 가져옵니다."""
 		try:
@@ -213,6 +212,7 @@ class SystemManager:
 		except KeyError:
 			logging.error(f"Message not found: {message_type} - {message_code}")
 			return f"Message not found: {message_type} - {message_code}"  # 메시지 없을 경우 기본 메시지 반환
+
 
 	def handle_error(self, message, error_code=None):
 		if error_code:

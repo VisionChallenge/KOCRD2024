@@ -8,8 +8,8 @@ from datetime import datetime
 from sqlalchemy.orm import declarative_base
 import pika
 import json
-from kocrd.system.config.config_module import Config, MessageHandler
-from kocrd.system.system_loder.file_utils import execute_and_log, execute_and_fetch
+from kocrd.system_manager.config.config_module import Config, MessageHandler
+from kocrd.system_manager.system_loder.file_utils import execute_and_log, execute_and_fetch
 
 
 class DatabaseManager:

@@ -1,7 +1,7 @@
 # kocrd/system/ui/menubar_ui.py
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu, qApp
-from kocrd.system.config.config_module import Config
-from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
+from kocrd.system_manager.config.config_module import Config
+from kocrd.system_manager.ui.preferenceswindow_ui import Preferenceswindow
 
 class Menubar:
     """메뉴바 이벤트 및 UI 관리 클래스."""

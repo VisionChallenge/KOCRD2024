@@ -2,10 +2,10 @@
 import logging
 import json
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QTextEdit, QProgressBar, QTableWidget, QHeaderView, QMessageBox, QInputDialog, QTableWidgetItem
-from kocrd.system.document_manager import DocumentManager
-from kocrd.system.database_manager import DatabaseManager
-from kocrd.system.main_ui import MainWindow
-from kocrd.system.config.config_module import Config, LanguageController
+from kocrd.system_manager.document_manager import DocumentManager
+from kocrd.system_manager.database_manager import DatabaseManager
+from kocrd.system_manager.main_ui import MainWindow
+from kocrd.system_manager.config.config_module import Config, LanguageController
 
 class DocumentUI(QWidget):
     def __init__(self, main_window: MainWindow, config: Config, database_manager: DatabaseManager, document_manager: DocumentManager, message_box: MessageBoxUI, LanguageController: LanguageController):

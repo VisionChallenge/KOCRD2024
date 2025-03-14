@@ -9,7 +9,7 @@ class Preferenceswindow (QMainWindow, Ui_PreferencesWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent  # 부모 클래스 참조 저장
-        from kocrd.system.settings_manager import SettingsManager  # settings_manager 모듈 불러오기
+        from kocrd.system_manager.settings_manager import SettingsManager  # settings_manager 모듈 불러오기
         self.settings_manager = SettingsManager()  # settings_manager 인스턴스 생성
         self.setWindowTitle("설정")
         self.resize(400, 300)

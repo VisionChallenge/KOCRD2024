@@ -6,10 +6,13 @@ import json
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget, QVBoxLayout
 import pandas as pd
 from fpdf import FPDF
-from kocrd.system.system_loder.document_table_view import DocumentTableView
-from kocrd.system.document_manager import DocumentManager
-from kocrd.system.config.config_module import Config, MessageHandler  # MessageHandler import 추가
-from kocrd.system.system_assistance import SystemAssistance
+from kocrd.system_manager.system_loder.document_table_view import DocumentTableView
+from kocrd.system_manager.document_manager import DocumentManager
+from kocrd.system_manager.config.config_module import Config, MessageHandler  # MessageHandler import 추가
+from kocrd.system_manager.system_assistance import SystemAssistance
+from kocrd.system_manager.system_loder.document_background_system import DocumentBackgroundSystem  # DocumentBackgroundSystem import 추가
+from kocrd.system_manager import SystemManager  # (class)SystemManager
+
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
@@ -34,7 +37,7 @@ class DocumentAction(QWidget):
         self.document_table_view = DocumentTableView(self)
         self.document_manager = DocumentBackgroundSystem(self.system_manager, self.parent, self.message_queue_manager)
         self.config = Config()
-        self.message_handler = MessageHandler(self.config)
+        self.get_massage = SystemManager(self)
         self.init_ui()
         logging.info("DocumentAction initialized.")
 
@@ -103,7 +106,7 @@ class DocumentAction(QWidget):
         logging.info(f"PDF saved to {filename}.")
     def save_to_excel(self, file_path=None):
         """Excel 파일로 저장합니다."""
-        default_excel_filename = self.config_loader.get("DEFAULT_EXCEL_FILENAME")  # 변경
+        default_excel_filename = self.config.get("DEFAULT_EXCEL_FILENAME")  # 변경
         headers, data = self.document_manager.get_table_data(include_headers=True)  # 변경
         df = pd.DataFrame(data, columns=headers)  # 변경
 

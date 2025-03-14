@@ -3,9 +3,9 @@ import json
 import logging
 from PyQt5.QtWidgets import QProgressBar, QTextEdit, QLineEdit, QListWidget, QVBoxLayout, QWidget, QPushButton
 from sympy import Q
-from kocrd.system.config.config_module import Config
-from kocrd.system.ai_model_manager import AIModelManager
-from kocrd.system.document_manager import DocumentManager
+from kocrd.system_manager.config.config_module import Config
+from kocrd.system_manager.ai_model_manager import AIModelManager
+from kocrd.system_manager.document_manager import DocumentManager
 class MonitoringUI(QWidget):
     def __init__(self, parent=None, config_path="config/ui.json"):
         super().__init__(parent)

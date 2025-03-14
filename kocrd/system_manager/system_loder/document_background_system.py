@@ -6,6 +6,7 @@ import json
 from fpdf import FPDF
 from pdf2image import convert_from_path
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from kocrd.system_manager.config.config_module import Config, MessageHandler
 import mimetypes
 
 
@@ -32,8 +33,8 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
         self.database_manager = database_manager
         self.ocr_manager = ocr_manager
         self.parent = parent
-        self.config_loader = ConfigLoader()  # ConfigLoader 인스턴스 생성
-        self.message_handler = MessageHandler(self.config_loader)  # MessageHandler 인스턴스 생성
+        self.config = Config()  # ConfigLoader 인스턴스 생성
+        self.message_handler = MessageHandler(self.config)  # MessageHandler 인스턴스 생성
         logging.info("DocumentProcessor initialized.")
     def perform_ocr(self, file_path):
         """OCR을 수행하여 텍스트를 추출합니다."""

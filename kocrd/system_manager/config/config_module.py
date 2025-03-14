@@ -9,9 +9,9 @@ import tensorflow as tf
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
-from kocrd.system.system_loder.file_utils import FileManager, show_message_box_safe
-from kocrd.system.temp_file_manager import TempFileManager
-from kocrd.system.main_ui import MainWindow
+from kocrd.system_manager.system_loder.file_utils import FileManager, show_message_box_safe
+from kocrd.system_manager.temp_file_manager import TempFileManager
+from kocrd.system_manager.main_ui import MainWindow
 from enum import Enum
 
 class MessageType(Enum):

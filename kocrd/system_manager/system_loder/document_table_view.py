@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QTableWidget, QVBoxLayout, QWidget, QTableWidgetItem
 import logging
 import json
 import os
-from kocrd.system.config.config_module import Config  # ConfigLoader import 추가
+from kocrd.system_manager.config.config_module import Config  # ConfigLoader import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:

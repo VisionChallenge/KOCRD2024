@@ -12,13 +12,13 @@ from regex import R
 from sqlalchemy.exc import SQLAlchemyError
 from pdf2image import convert_from_path
 from typing import List, Optional
-from kocrd.system.config.config_module import Config
-from kocrd.system.system_loder.document_table_view import DocumentTableView
-from kocrd.system.system_loder.document_action import DocumentAction
-from kocrd.system.system_loder.document_background_system import DocumentBackgroundSystem
-from kocrd.system.system_loder.document_temp import DocumentTempManager
-from kocrd.system.ocr_manager import OCRManager
-from kocrd.system.database_manager import DatabaseManager
+from kocrd.system_manager.config.config_module import Config
+from kocrd.system_manager.system_loder.document_table_view import DocumentTableView
+from kocrd.system_manager.system_loder.document_action import DocumentAction
+from kocrd.system_manager.system_loder.document_background_system import DocumentBackgroundSystem
+from kocrd.system_manager.system_loder.document_temp import DocumentTempManager
+from kocrd.system_manager.ocr_manager import OCRManager
+from kocrd.system_manager.database_manager import DatabaseManager
 
 class DocumentManager(QWidget):
     def __init__(self, database_manager, message_queue_manager, parent=None):

@@ -8,7 +8,7 @@ from typing import Callable, Dict, Any
 import pika.exceptions
 from kocrd.config.loader import ConfigLoader
 from kocrd.config.message.message_handler import MessageHandler
-from kocrd.system.ai_model_manager import AIModelManager
+from kocrd.system_manager.ai_model_manager import AIModelManager
 
 class AIOCRRunning:
     def __init__(self, system_manager, ai_data_manager):

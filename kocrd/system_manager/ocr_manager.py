@@ -12,10 +12,10 @@ import sys
 from PyQt5.QtWidgets import QMessageBox
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from kocrd.system.system_loder.ocr_utils import OCRHelper
-from kocrd.system.settings_manager import SettingsManager
-from kocrd.system.config.config_module import Config, MessageType
-from kocrd.system.main_ui import MainWindow
+from kocrd.system_manager.system_loder.ocr_utils import OCRHelper
+from kocrd.system_manager.settings_manager import SettingsManager
+from kocrd.system_manager.config.config_module import Config, MessageType
+from kocrd.system_manager.main_ui import MainWindow
 
 class OCRManager:
     """OCR 작업을 처리하는 클래스."""

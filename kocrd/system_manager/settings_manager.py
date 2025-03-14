@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog
 from typing import Union, List, Tuple, Callable, Dict, Optional
 from pika.exceptions import AMQPConnectionError
-from kocrd.system.config.config_module import Config
+from kocrd.system_manager.config.config_module import Config
 class SettingsManager:
     """설정 관리 클래스."""
     def __init__(self, config_file="config/development.json"):
@@ -136,7 +136,7 @@ class SettingsManager:
 
     def open_settings_dialog(self, parent=None): #설정 다이얼로그를 엽니다
         logging.info(f"Opening settings dialog. Parent: {parent}")
-        from kocrd.system.ui.preferenceswindow_ui import Preferenceswindow
+        from kocrd.system_manager.ui.preferenceswindow_ui import Preferenceswindow
         dialog = Preferenceswindow(settings_manager=self, parent=parent)
         dialog.exec_()
 
