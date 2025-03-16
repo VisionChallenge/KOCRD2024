@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QInputDialog
 import os
 import importlib
 
-class Preferenceswindow (QMainWindow, Ui_PreferencesWindow):
+class Preferenceswindow (QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent  # 부모 클래스 참조 저장
@@ -13,7 +13,7 @@ class Preferenceswindow (QMainWindow, Ui_PreferencesWindow):
         self.settings_manager = SettingsManager()  # settings_manager 인스턴스 생성
         self.setWindowTitle("설정")
         self.resize(400, 300)
-        self.ui = Ui_PreferencesWindow()
+        self.ui = 
         self.tabs = QTabWidget(self)
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)

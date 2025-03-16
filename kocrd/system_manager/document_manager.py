@@ -19,21 +19,29 @@ from kocrd.system_manager.system_loder.document_background_system import Documen
 from kocrd.system_manager.system_loder.document_temp import DocumentTempManager
 from kocrd.system_manager.ocr_manager import OCRManager
 from kocrd.system_manager.database_manager import DatabaseManager
+from kocrd.system_manager.rabbitmq_manager import RabbitMQManager
+
+config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
+with open(config_path, 'r', encoding='utf-8') as f:
+    config = json.load(f)
+
+QUEUES = config["queues"]
 
 class DocumentManager(QWidget):
-    def __init__(self, database_manager, message_queue_manager, parent=None):
+    def __init__(self, database_manager, parent=None):
         super().__init__(parent)
         self.parent = parent
-        self.message_queue_manager = message_queue_manager
+        self.message_queue_manager = RabbitMQManager(config)
         self.ocr_manager = OCRManager()
         self.temp_file_manager = DocumentTempManager()  # DocumentTempManager 인스턴스 생성
-        self.document_processor = DocumentAction(database_manager, parent, self, message_queue_manager)
+        self.document_action = DocumentAction(self.document_background_system, parent, self)
         self.document_table_view = DocumentTableView(self)
-        self.document_controller = DocumentBackgroundSystem(self.document_processor, parent, self)
+        self.document_background_system = DocumentBackgroundSystem(database_manager, self.ocr_manager, parent, self, message_queue_manager)
         self.database_manager = DatabaseManager()
         self.config = Config() # config 객체 가져오기
 
-    def handle_document_exception(self, parent, category, code, exception, additional_message=None): #문서 관련 예외를 처리하고 메시지를 표시합니다
+    def handle_document_exception(self, parent, category, code, exception, additional_message=None):
+        """문서 관련 예외를 처리하고 메시지를 표시합니다."""
         message_id = f"{category}_{code}"
         error_message = self.config.link_text_processor(message_id)
         if additional_message:
@@ -43,33 +51,46 @@ class DocumentManager(QWidget):
         logging.error(log_message)
         QMessageBox.critical(parent, "오류", error_message.format(error=exception))
 
+
     def show_message(self, parent, title, message):
         QMessageBox.information(parent, title, message)
 
-    def update_document_type(self, current_file_name, new_type, selected_row): #문서 유형을 업데이트
+    def update_document_type(self, current_file_name, new_type, selected_row):
+        """문서 유형을 업데이트합니다."""
         try:
             self.database_manager.update_document_type(current_file_name, new_type)
             self.document_table_view.update_item_text(selected_row, 1, new_type)
             logging.info(f"Updated document type for {current_file_name} to {new_type}")
         except Exception as e:
             logging.error(f"Error updating document type: {e}")
-            self.message_box.show_error_message(self.message_handler.get_message("ERR", "205"))
+            self.handle_document_exception(self.parent, "document", "205", e)
 
-    def send_message(self, message): #메시지를 큐에 전송
+    def send_message(self, message):
+        """메시지를 큐에 전송합니다."""
         try:
             queue_name = QUEUES["document_queue"]
             self.message_queue_manager.send_message(queue_name, message)
             logging.info(f"Message sent to queue '{queue_name}': {message}")
         except Exception as e:
-            self.config.link_text_processor("520","ERR", exception=e)
-            raise
+            self.handle_document_exception(self.parent, "document", "520", e)
+    def start_consuming(self):
+        """메시지 큐에서 메시지 소비 시작."""
+        try:
+            self.message_queue_manager.start_consuming()
+        except Exception as e:
+            self.handle_document_exception(self.parent, "document", "520", e)
+
+    def stop_consuming(self):
+        """메시지 큐에서 메시지 소비 중지."""
+        try:
+            self.message_queue_manager.stop_consuming()
+        except Exception as e:
+            self.handle_document_exception(self.parent, "document", "520", e)
 
     def is_match_found(self, keyword, cell_text, match_exact):
         return self.document_table_view.is_match_found(keyword, cell_text, match_exact)
     def get_table_data(self, include_headers=False):
         return self.document_table_view.get_table_data(include_headers)
-    def start_consuming(self): #메시지 큐에서 메시지 소비 시작.
-        self.message_queue_manager.start_consuming()
     def save_document_info(self, document_info): #문서 정보를 데이터베이스에 저장
         return self.database_manager.save_document_info(document_info)
     def add_document_to_table(self, document_info):
@@ -85,13 +106,13 @@ class DocumentManager(QWidget):
     def save_ocr_images(self, pdf_file_path): #PDF 파일에서 OCR 이미지를 추출하고 저장합니다
         return self.ocr_manager.save_ocr_images(pdf_file_path)
     def get_ui(self):
-        return self.document_controller.get_ui()
+        return self.document_action.get_ui()
     def get_valid_doc_types(self):
-        return self.document_processor.get_valid_doc_types()
+        return self.document_background_system.get_valid_doc_types()
     def determine_document_type(self, text):
-        return self.document_processor.determine_document_type(text)
+        return self.document_background_system.determine_document_type(text)
     def import_documents(self): #문서 가져오기
-        return DocumentController.import_documents(self)
+        return self.document_action.import_documents()
     def get_selected_file_names(self):
         return self.document_table_view.get_selected_file_names()
     def read_temp_file(self, file_path): #임시 파일의 내용을 읽어 반환합니다
@@ -103,13 +124,13 @@ class DocumentManager(QWidget):
     def filter_documents(self, criteria):
         return self.document_table_view.filter_table(criteria)
     def export_to_pdf(self, data, filename="output.pdf"):
-        return self.document_controller.export_to_pdf(data, filename)
+        return self.document_action.export_to_pdf(filename)
+
     def search_documents(self, keyword, column_index=None, match_exact=False):
-        return self.document_controller.search_documents(keyword, column_index, match_exact)
+        return self.document_action.search_documents(keyword, column_index, match_exact)
+
     def save_feedback(self, feedback_data):
         return self.database_manager.save_feedback(feedback_data)
-    def load_document(self, file_path):
-        self.document_controller.load_document(file_path)
 
 def process_document_task(ch, method, properties, body):
     message = json.loads(body)

@@ -6,7 +6,8 @@ import json
 from fpdf import FPDF
 from pdf2image import convert_from_path
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
-from kocrd.system_manager.config.config_module import Config, MessageHandler
+from kocrd.system_manager.config.config_module import Config, LanguageController
+from kocrd.system_manager.document_manager import DocumentManager
 import mimetypes
 
 
@@ -21,7 +22,6 @@ VALID_FILE_EXTENSIONS = config["VALID_FILE_EXTENSIONS"]
 MAX_FILE_SIZE = config["MAX_FILE_SIZE"]
 MESSAGE_QUEUE = config["MESSAGE_QUEUE"]
 MESSAGE_TYPES = config["message_types"]
-QUEUES = config["queues"]
 LOGGING_INFO = config["messages"]["log"]
 LOGGING_WARNING = config["messages"]["warning"]
 LOGGING_ERROR = config["messages"]["error"]
@@ -32,10 +32,12 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
         self.system_manager = system_manager
         self.database_manager = database_manager
         self.ocr_manager = ocr_manager
+        self.document_manager = DocumentManager(database_manager, message_queue_manager, parent)
         self.parent = parent
-        self.config = Config()  # ConfigLoader 인스턴스 생성
-        self.message_handler = MessageHandler(self.config)  # MessageHandler 인스턴스 생성
-        logging.info("DocumentProcessor initialized.")
+        self.config = Config()  # Config 인스턴스 생성
+        self.language_controller = LanguageController()  # LanguageController 인스턴스 생성
+        logging.info("DocumentBackgroundSystem initialized.")
+
     def perform_ocr(self, file_path):
         """OCR을 수행하여 텍스트를 추출합니다."""
         try:
@@ -45,8 +47,9 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
                 raise ValueError(f"No text extracted for: {file_path}")
             return extracted_text
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.519", error=e))
+            logging.error(self.language_controller.get_message("error.519", error=e))
             raise
+
     def process_single_document(self, file_path):
         """단일 문서를 처리합니다 (유효성 검사, OCR, 정보 생성 및 저장)."""
         max_file_size = self.system_manager.get_setting("MAX_FILE_SIZE")
@@ -119,12 +122,12 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
             logging.info(f"Document updated successfully: {file_name}")
             return True
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))
+            logging.error(self.language_controller.get_message("error.520", error=e))
             return False
     def determine_document_type(self, text):
         """자동 문서 분석."""
         if not text:
-            logging.warning(self.message_handler.get_message("warning.505"))
+            logging.warning(self.language_controller.get_message("warning.505"))
             return "Unknown"
 
         try:
@@ -136,8 +139,9 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
             else:
                 return "Unknown"
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))
+            logging.error(self.language_controller.get_message("error.520", error=e))
             return "Unknown"
+
 
     def batch_import_documents(self):
         """문서를 일괄적으로 가져오고 처리합니다."""
@@ -156,7 +160,7 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
             return results
 
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))
+            logging.error(self.language_controller.get_message("error.520", error=e))
             return []
 
     def get_valid_doc_types(self):
@@ -166,18 +170,13 @@ class DocumentBackgroundSystem: # 문서 처리 로직을 담당하는 클래스
             results = self.database_manager.execute_query(query, fetch=True)
             return [row['doc_type'] for row in results] if results else []
         except SQLAlchemyError as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))
+            logging.error(self.language_controller.get_message("error.520", error=e))
             return []
 
     def send_message(self, message):
-        """지정된 큐에 메시지를 전송합니다."""
-        try:
-            queue_name = QUEUES["document_queue"]
-            self.message_queue_manager.send_message(queue_name, message)
-            logging.info(f"Message sent to queue '{queue_name}': {message}")
-        except Exception as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))
+        """DocumentManager의 send_message 메서드를 호출하여 메시지를 전송합니다."""
+        self.document_manager.send_message(message)
 
     def handle_file_operation(self, operation, file_path, content=None, destination=None):
         """파일 작업을 공통적으로 처리하는 함수 (확장)"""
-        return self.config_loader.handle_file_operation(operation, file_path, content, destination)  # 변경
+        return self.config.handle_file_operation(operation, file_path, content, destination)

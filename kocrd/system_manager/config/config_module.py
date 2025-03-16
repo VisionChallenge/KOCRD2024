@@ -1,4 +1,5 @@
 # kocrd/system/config/config_module.py
+from calendar import c
 import logging
 import re
 from typing import Dict, Any, List, Optional, Callable
@@ -41,9 +42,17 @@ class FilePathConfig:
 class LanguageController:
     def __init__(self, language_config_path="kocrd/system/config/language/loader_language.json"):
         self.language_packs = {}
-        self.language_configs = self._load_language_configs(language_config_path)
+        self.load_language_configs(language_config_path)
         self.current_language = "en"
-        self._load_all_language_packs()
+        self.load_all_language_packs()
+
+    def load_language_configs(self, config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                self.language_configs = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.error(f"Error loading language config: {e}")
+            self.language_configs = {}
 
     # ConfigLoader.load_language_packs -> LanguageController로 이동 및 수정
     def load_language_packs(self, lang_dir):
@@ -73,13 +82,13 @@ class LanguageController:
             logging.error(f"Error loading language config: {e}")
             return {}
 
-    def _load_all_language_packs(self):
+    def load_all_language_packs(self):
         for lang_code, config in self.language_configs.items():
             lang_pack_path = config.get("language_pack")
             if lang_pack_path:
-                self._load_language_pack(lang_code, lang_pack_path)
+                self.load_language_pack(lang_code, lang_pack_path)
 
-    def _load_language_pack(self, lang_code, lang_pack_path):
+    def load_language_pack(self, lang_code, lang_pack_path):
         try:
             with open(lang_pack_path, "r", encoding="utf-8") as f:
                 self.language_packs[lang_code] = json.load(f)
@@ -92,33 +101,23 @@ class LanguageController:
         else:
             logging.warning(f"Language code '{language_code}' not found.")
 
-    def get_message(self, group: str, message_type: MessageType, coll_num: str):
-        """
-        그룹, 메시지 타입, coll_num을 기반으로 메시지를 검색합니다.
-
-        :param group: 메시지가 속한 그룹 (예: "UI", "messages")
-        :param message_type: 메시지 타입 (MessageType enum)
-        :param coll_num: 메시지의 coll_num (예: "001", "202")
-        :return: 검색된 메시지 또는 오류 메시지
-        """
-        lang_pack = self.language_packs.get(self.current_language)
-        if lang_pack:
-            try:
-                messages = lang_pack[group][message_type.value]
-                return messages.get(coll_num, f"Message '{group}.{message_type.value}.{coll_num}' not found.")
-            except KeyError:
-                return f"Group '{group}' or message type '{message_type.value}' not found."
-        return f"Language pack for '{self.current_language}' not found."
-
     def determine_language(self, preferred_language=None):
         if preferred_language and preferred_language in self.language_packs:
             return preferred_language
         return list(self.language_packs.keys())[0] if self.language_packs else "en"
 
+    def get_message(self, message_id: str, message_type: MessageType):
+        lang_pack = self.language_packs.get(self.current_language)
+        if lang_pack:
+            messages = lang_pack.get("messages", {}).get(message_type.value, {})
+            return messages.get(message_id, f"Message '{message_type.value}_{message_id}' not found.")
+        return f"Language pack for '{self.current_language}' not found."
+
 class MessageHandler:
     def __init__(self):
         self.config = Config
         self.language_controller = LanguageController()
+        self.main_window = MainWindow()
         self.message_handlers = {
             MessageType.ERR: self._handle_error_message,
             MessageType.WARN: self._handle_warning_message,
@@ -136,36 +135,30 @@ class MessageHandler:
         else:
             logging.warning(f"알 수 없는 메시지 타입: {message_type}")
 
-    def _handle_error_message(self, group: str, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(group, MessageType.ERR, message_id)
-        message = self._format_message(message, data)
-        if hasattr(self, 'main_window') and self.main_window:
-            self.main_window.show_error_message(message)
+    def _handle_error_message(self, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(message_id, MessageType.ERR)
+        self.main_window.show_error_message(message)
         logging.error(message)
 
-    def _handle_warning_message(self, group: str, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(group, MessageType.WARN, message_id)
-        message = self._format_message(message, data)
-        if hasattr(self, 'main_window') and self.main_window:
-            self.main_window.show_warning_message(message)
+    def _handle_warning_message(self, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(message_id, MessageType.WARN)
+        self.main_window.show_warning_message(message)
         logging.warning(message)
 
-    def _handle_log_message(self, group: str, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(group, MessageType.LOG, message_id)
-        message = self._format_message(message, data)
+    def _handle_log_message(self, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(message_id, MessageType.LOG)
         logging.info(message)
 
-    def _handle_message(self, group: str, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(group, MessageType.MSG, message_id)
-        message = self._format_message(message, data)
+    def _handle_message(self, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(message_id, MessageType.MSG)
         logging.info(message)
 
-    def _handle_ui_message(self, group: str, message_id: str, data: dict = None):
-        return self.language_controller.get_message(group, MessageType.UI, message_id)
+    def _handle_ui_message(self, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(message_id, MessageType.UI)
+        return message
 
-    def _handle_ocr_message(self, group: str, message_id: str, data: dict = None):
-        message = self.language_controller.get_message(group, MessageType.OCR, message_id)
-        message = self._format_message(message, data)
+    def _handle_ocr_message(self, message_id: str, data: dict = None):
+        message = self.language_controller.get_message(message_id, MessageType.OCR)
         logging.info(message)
 
     def _format_message(self, message: str, data: dict = None):

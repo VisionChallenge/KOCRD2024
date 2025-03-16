@@ -8,7 +8,7 @@ from kocrd.system_manager.main_ui import MainWindow
 from kocrd.system_manager.config.config_module import Config, LanguageController
 
 class DocumentUI(QWidget):
-    def __init__(self, main_window: MainWindow, config: Config, database_manager: DatabaseManager, document_manager: DocumentManager, message_box: MessageBoxUI, LanguageController: LanguageController):
+    def __init__(self, main_window: MainWindow, config: Config, database_manager: DatabaseManager, document_manager: DocumentManager):
         super().__init__()
         self.main_window = main_window
         self.table_widget = None
@@ -17,6 +17,7 @@ class DocumentUI(QWidget):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.config = Config
+        self.languageController = LanguageController()
         self.init_ui()
 
     def init_ui(self):
@@ -39,13 +40,13 @@ class DocumentUI(QWidget):
     def clear_table(self):
         """파일 테이블을 초기화합니다."""
         self.document_manager.clear_table()
-        logging.info(self.message_handler.get_message("MSG", "203"))
+        logging.info(self.languageController.get_message("MSG", "203"))
 
     def update_document_info(self):
         """선택된 문서의 정보를 업데이트합니다."""
         selected_items = self.document_manager.get_selected_items()
         if not selected_items:
-            self.main_window.message_box.show_warning_message(self.message_handler.get_message("MSG", "208"))
+            self.main_window.message_box.show_warning_message(self.languageController.get_message("MSG", "208"))
             return
 
         selected_row = selected_items[0].row()

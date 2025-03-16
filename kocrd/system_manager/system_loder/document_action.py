@@ -8,10 +8,9 @@ import pandas as pd
 from fpdf import FPDF
 from kocrd.system_manager.system_loder.document_table_view import DocumentTableView
 from kocrd.system_manager.document_manager import DocumentManager
-from kocrd.system_manager.config.config_module import Config, MessageHandler  # MessageHandler import 추가
+from kocrd.system_manager.config.config_module import Config, LanguageController
 from kocrd.system_manager.system_assistance import SystemAssistance
-from kocrd.system_manager.system_loder.document_background_system import DocumentBackgroundSystem  # DocumentBackgroundSystem import 추가
-from kocrd.system_manager import SystemManager  # (class)SystemManager
+from kocrd.system_manager.system_loder.document_background_system import DocumentBackgroundSystem
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -29,15 +28,15 @@ LOGGING_WARNING = config["messages"]["warning"]
 LOGGING_ERROR = config["messages"]["error"]
 
 class DocumentAction(QWidget):
-    def __init__(self, document_processor, parent, system_manager):
-        self.document_processor = document_processor
+    def __init__(self, parent, system_manager):
+        super().__init__(parent)
         self.parent = parent
         self.system_manager = system_manager
-        self.message_queue_manager = SystemAssistance.message_queue_manager # message_queue_manager 추가
+        self.document_manager = DocumentManager(system_manager, parent)
         self.document_table_view = DocumentTableView(self)
-        self.document_manager = DocumentBackgroundSystem(self.system_manager, self.parent, self.message_queue_manager)
+        self.DocumentBackgroundSystem = DocumentBackgroundSystem(self.system_manager, self.parent, self.message_queue_manager)
         self.config = Config()
-        self.get_massage = SystemManager(self)
+        self.language_controller = LanguageController()
         self.init_ui()
         logging.info("DocumentAction initialized.")
 
@@ -47,6 +46,16 @@ class DocumentAction(QWidget):
         self.setLayout(layout)
     def get_ui(self):
         return self.document_table_view
+    def import_documents(self):
+        file_paths = self.open_file_dialog()
+        if not file_paths:
+            return
+
+        document_infos = self.DocumentBackgroundSystem.process_multiple_documents(file_paths)
+        if document_infos:
+            for document_info in document_infos:
+                self.document_table_view.add_document(document_info)
+
     def open_file_dialog(self):
         file_dialog = QFileDialog(self.parent, "문서 가져오기")
         file_dialog.setFileMode(QFileDialog.ExistingFiles)
@@ -54,18 +63,9 @@ class DocumentAction(QWidget):
             self.parent, "문서 가져오기", "", f"모든 파일 (*.*);;텍스트 파일 (*.txt);;PDF 파일 (*.pdf);;이미지 파일 (*.png *.jpg);;엑셀 파일 (*.xlsx);;워드 파일 (*.docx)"
         )
         return file_paths
-    def import_documents(self):
-        file_paths = self.open_file_dialog()
-        if not file_paths:
-            return
-
-        document_infos = self.document_processor.process_multiple_documents(file_paths)
-        if document_infos:
-            for document_info in document_infos:
-                self.document_table_view.add_document(document_info)
     def generate_report(self, output_path=None):
         """보고서를 생성합니다."""
-        default_report_filename = self.config_loader.get("DEFAULT_REPORT_FILENAME")  # 변경
+        default_report_filename = self.config.get("DEFAULT_REPORT_FILENAME")  # 변경
         headers, data = self.document_manager.get_table_data(include_headers=True)  # 변경
         extracted_texts = []
         extracted_texts.append("\t".join(headers))
@@ -133,7 +133,7 @@ class DocumentAction(QWidget):
     def get_selected_file_name(self):
         return self.document_table_view.get_selected_file_name()
     def load_document(self, file_path):
-        document_info = self.document_processor.process_single_document(file_path)
+        document_info = self.DocumentBackgroundSystem.process_single_document(file_path)
         if document_info:
             self.document_table_view.add_document(document_info)
     def search_documents(self, keyword, column_index=None, match_exact=False):
@@ -170,22 +170,19 @@ class DocumentAction(QWidget):
             logging.info(f"Document search completed for keyword: {keyword}")
         except Exception as e:
             self.document_manager.handle_document_exception(self.parent, "document", "520", e, "문서 검색 중 오류 발생")  # 변경
+
     def start_consuming(self):
         """메시지 큐에서 메시지를 소비."""
         try:
             self.message_queue_manager.start_consuming()
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.520", error=e))  # 변경
+            logging.error(self.language_controller.get_message("error.520", error=e))
+
     def send_message(self, message):
-        """메시지를 큐에 전송."""
-        try:
-            queue_name = QUEUES["document_queue"]
-            self.document_processor.send_message(queue_name, message)
-            logging.info(f"Message sent to queue '{queue_name}': {message}")
-        except Exception as e:
-            logging.error(self.config_loader.get_message("error.520", error=e))  # 변경
+        """DocumentManager의 send_message 메서드를 호출하여 메시지를 전송합니다."""
+        self.document_manager.send_message(message)
 
     def load_document(self, file_path):
-        document_info = self.document_processor.process_single_document(file_path)
+        document_info = self.DocumentBackgroundSystem.process_single_document(file_path)
         if document_info:
             self.document_table_view.add_document(document_info)
