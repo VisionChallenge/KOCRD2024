@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QTableWidget, QVBoxLayout, QWidget, QTableWidgetItem
 import logging
 import json
 import os
-from kocrd.system_manager.config.config_module import Config  # ConfigLoader import 추가
+from kocrd.system_manager.config.config_module import Config, LanguageController  # Config, LanguageController import 추가
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -12,7 +12,7 @@ with open(config_path, 'r', encoding='utf-8') as f:
 class DocumentTableView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.message_handler = MessageHandler(Config(config_path))  # MessageHandler 인스턴스 생성
+        self.language_controller = LanguageController()  # LanguageController 인스턴스 생성
         self.table_widget = QTableWidget()
         self.init_ui()
         logging.info("DocumentTableView initialized.")
@@ -66,7 +66,7 @@ class DocumentTableView(QWidget):
     def get_selected_file_names(self):
         selected_items = self.table_widget.selectedItems()
         if not selected_items:
-            QMessageBox.warning(self.parent, "선택 오류", self.message_handler.get_message("error.921"))  # 변경
+            QMessageBox.warning(self.parent, "선택 오류", self.language_controller.get_message("error.921"))  # 변경
             return None
 
         selected_file_names = []

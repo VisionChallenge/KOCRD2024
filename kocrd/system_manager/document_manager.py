@@ -34,7 +34,7 @@ class DocumentManager(QWidget):
         self.message_queue_manager = RabbitMQManager(config)
         self.ocr_manager = OCRManager()
         self.temp_file_manager = DocumentTempManager()  # DocumentTempManager 인스턴스 생성
-        self.document_action = DocumentAction(self.document_background_system, parent, self)
+        self.document_action = DocumentAction(parent, self)
         self.document_table_view = DocumentTableView(self)
         self.document_background_system = DocumentBackgroundSystem(database_manager, self.ocr_manager, parent, self, message_queue_manager)
         self.database_manager = DatabaseManager()

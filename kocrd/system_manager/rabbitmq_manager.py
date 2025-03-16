@@ -2,18 +2,17 @@ import pika
 import logging
 import json
 import os
-from kocrd.config.loader import ConfigLoader, load_json, merge_configs, get_temp_dir
-from kocrd.config.message.message_handler import MessageHandler
+from kocrd.system_manager.config.config_module import Config, LanguageController
 
 class RabbitMQManager:
     def __init__(self, config):
-        self.config = config
+        self.config = Config
         self.host = config.get("rabbitmq.host")
         self.port = config.get("rabbitmq.port")
         self.user = config.get("rabbitmq.user")
         self.password = config.get("rabbitmq.password")
         self.virtual_host = config.get("rabbitmq.virtual_host")
-        self.message_handler = MessageHandler(self.config)
+        self.language_controller = LanguageController()
         self.connection = None
         self.channel = None
         self._connect()

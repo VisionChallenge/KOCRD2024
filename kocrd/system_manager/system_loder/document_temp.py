@@ -6,11 +6,12 @@ import shutil
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-from kocrd.system_manager.config.config_module import Config
+from kocrd.system_manager.config.config_module import Config, LanguageController
 
 class DocumentTempManager:
     def __init__(self, ):
         self.config = Config
+        self.language_controller = LanguageController()
         self.temp_files = []
         self.temp_dir = tempfile.mkdtemp()
         self.backup_dir = os.path.join(self.temp_dir, "backup")
@@ -55,7 +56,7 @@ class DocumentTempManager:
             logging.info("Temporary files backed up.")
             return True
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.507", e=e))
+            logging.error(self.language_controller.get_message("error.507", e=e))
             return False
 
     def restore_temp_files(self):
@@ -65,12 +66,12 @@ class DocumentTempManager:
                 file_path = os.path.join(self.backup_dir, filename)
                 restore_path = os.path.join(self.temp_dir, filename) # 복원 경로 설정
                 if os.path.isfile(file_path):
-                    if not self.config_loader.handle_file_operation("copy", file_path, destination=restore_path): # 변경
+                    if not self.config.handle_file_operation("copy", file_path, destination=restore_path): # 변경
                         return False # 복원 실패 시 False 반환
             logging.info("Temporary files restored.")
             return True
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.507", e=e))
+            logging.error(self.language_controller.get_message("error.507", e=e))
             return False
 
     def cleanup_all_temp_files(self, retention_time: int = 3600):
@@ -87,9 +88,9 @@ class DocumentTempManager:
                         logging.info(f"Expired temporary file removed: {file_path}")
             logging.info(f"Temporary directory cleaned.")
         except FileNotFoundError:
-            logging.warning(self.message_handler.get_message("warning.401", temp_dir=self.temp_dir))
+            logging.warning(self.language_controller.get_message("warning.401", temp_dir=self.temp_dir))
         except Exception as e:
-            logging.error(self.message_handler.get_message("error.507", e=e))
+            logging.error(self.language_controller.get_message("error.507", e=e))
 
     def cleanup_specific_files(self, files: Optional[List[str]]):
         """특정 파일들을 정리합니다."""
@@ -99,11 +100,11 @@ class DocumentTempManager:
                     os.remove(file_path)
                     logging.info(f"File removed: {file_path}")
                 except FileNotFoundError:
-                    logging.warning(self.message_handler.get_message("warning.401", file_path=file_path))
+                    logging.warning(self.language_controller.get_message("warning.401", file_path=file_path))
                 except Exception as e:
-                    logging.error(self.message_handler.get_message("error.507", e=e))
+                    logging.error(self.language_controller.get_message("error.507", e=e))
         else:
             self.cleanup_all_temp_files()
     def handle_file_operation(self, operation, file_path, content=None, destination=None):
         """파일 작업을 공통적으로 처리하는 함수 (확장)"""
-        return self.config_loader.handle_file_operation(operation, file_path, content, destination)  # 변경
+        return self.config.handle_file_operation(operation, file_path, content, destination)  # 변경
