@@ -3,10 +3,9 @@ import json
 import logging
 from typing import Callable, Dict, Optional  # 타입 힌트 import
 
-from kocrd.config.config import ConfigManager  # ConfigManager import
+from kocrd.system_manager.config.config_module import Config
 from kocrd.handlers.training_event_handler import TrainingEventHandler
 from typing import Dict, Any
-from kocrd.config.config import config  # Config import
 
 def handle_error(logger, error_type, code, exception, message):
     with open('kocrd/config/messages.json', 'r') as file:
