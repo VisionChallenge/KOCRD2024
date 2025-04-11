@@ -1,4 +1,4 @@
-from kocrd.config.config import ConfigManager # ConfigManager import
+from kocrd.config.config import Config # ConfigManager import
 from PyQt5.QtWidgets import QInputDialog, QMessageBox
 import logging
 import os
