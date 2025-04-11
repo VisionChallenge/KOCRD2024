@@ -9,6 +9,7 @@ from kocrd.system_manager.database_manager import DatabaseManager
 from kocrd.system_manager.document_manager import DocumentManager
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, Qt
 import json
+import logging
 
 from tool.Sentence_Transformer.numpy._core.tests.test_scalarinherit import C
 
