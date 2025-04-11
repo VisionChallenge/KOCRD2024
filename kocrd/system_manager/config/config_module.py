@@ -6,7 +6,6 @@ from typing import Dict, Any, List, Optional, Callable
 import os
 import json
 import pika
-import tensorflow as tf
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
@@ -314,12 +313,13 @@ class Config:
 
     def load_tensorflow_model(self, model_path):
         try:
-            model = tf.keras.models.load_model(model_path)
+            model = keras.models.load_model(model_path)
             logging.info(f"TensorFlow 모델 로딩 완료: {model_path}")
             return model
         except Exception as e:
             self.link_text_processor("511", MessageType.ERR, exception=e, additional_message=f"TensorFlow 모델 로드 실패: {model_path}")
             return None
+
     def load_gpt_model(self, gpt_model_path):
         try:
             logging.info("GPT 모델 로딩 중...")

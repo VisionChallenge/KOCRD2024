@@ -2,6 +2,7 @@ pip install sqlalchemy
 pip install PyQt5
 pip install pdf2image
 python3 -m pip install tensorflow[and-cuda]
+pip install sympy
 
 class SystemManager:
     """
