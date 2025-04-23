@@ -1,8 +1,8 @@
 # kocrd/system/main_ui.py
 from PyQt5.QtWidgets import QMainWindow, QMessageBox, QSplitter, QProgressBar, QStatusBar
-from ui.document_ui import DocumentUI
-from ui.monitoring_ui import MonitoringUI
-from ui.menubar_ui import Menubar
+from kocrd.system_manager.ui.document_ui import DocumentUI
+from kocrd.system_manager.ui.monitoring_ui import MonitoringUI
+from kocrd.system_manager.ui.menubar_ui import Menubar
 from kocrd.system_manager.ui.preferenceswindow_ui import Preferenceswindow
 from kocrd.system_manager.config.config_module import Config
 from kocrd.system_manager.database_manager import DatabaseManager
