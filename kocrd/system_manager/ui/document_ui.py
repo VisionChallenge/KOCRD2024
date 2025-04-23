@@ -1,6 +1,5 @@
 # kocrd/system/ui/document_ui.py
 import logging
-import json
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QTextEdit, QProgressBar, QTableWidget, QHeaderView, QMessageBox, QInputDialog, QTableWidgetItem
 from kocrd.system_manager.document_manager import DocumentManager
 from kocrd.system_manager.database_manager import DatabaseManager
