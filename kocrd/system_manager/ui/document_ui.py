@@ -5,6 +5,9 @@ from kocrd.system_manager.document_manager import DocumentManager
 from kocrd.system_manager.database_manager import DatabaseManager
 from kocrd.system_manager.main_ui import MainWindow
 from kocrd.system_manager.config.config_module import Config, LanguageController
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 class DocumentUI(QWidget):
     def __init__(self, main_window: MainWindow, config: Config, database_manager: DatabaseManager, document_manager: DocumentManager):
