@@ -19,7 +19,7 @@ from kocrd.system_manager.system_loder.document_background_system import Documen
 from kocrd.system_manager.system_loder.document_temp import DocumentTempManager
 from kocrd.system_manager.ocr_manager import OCRManager
 from kocrd.system_manager.database_manager import DatabaseManager
-from kocrd.system_manager.rabbitmq_manager import RabbitMQManager
+from kocrd.system_manager.message_and_queue_manager import RabbitMQManager
 
 config_path = os.path.join(os.path.dirname(__file__), '..', 'managers_config.json')
 with open(config_path, 'r', encoding='utf-8') as f:
