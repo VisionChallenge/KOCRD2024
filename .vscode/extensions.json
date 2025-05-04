@@ -1,7 +1,6 @@
 {
     "recommendations": [
         "ms-ceintl.vscode-language-pack-ko",
-        "ms-vscode.cmake-tools",
-        "ms-python.python"
+        "ms-vscode.cmake-tools"
     ]
 }
