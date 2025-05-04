@@ -10,7 +10,9 @@ from kocrd.system_manager.document_manager import DocumentManager
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, Qt
 import json
 import logging
-
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 from tool.Sentence_Transformer.numpy._core.tests.test_scalarinherit import C
 
