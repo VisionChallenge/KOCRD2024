@@ -1,0 +1,14 @@
+{
+    "en": {
+      "language_pack": "kocrd/system/config/language/en.json",
+      "language": "English"
+    },
+    "ko": {
+      "language_pack": "kocrd/system/config/language/ko.json",
+      "language": "한국어"
+    },
+    "cn": {
+      "language_pack": "kocrd/system/config/language/cn.json",
+      "language": "中文"
+    }
+  }

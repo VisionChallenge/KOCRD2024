@@ -1,6 +1,13 @@
 {
     "cmake.sourceDirectory": "C:/Users/rhkrt/Documents/GitHub/tool/Tesseract-OCR",
     "cSpell.enabledSchemes": {
-        "file": false
-    }
+        "file": true
+    },
+    "python.venvFolders": [
+        "${workspaceFolder}/.venv",
+        "${workspaceFolder}/env",
+        "~/.virtualenvs",
+        "C:/Users/rhkrt/Documents/GitHub/.venv"
+        ]
 }
+
