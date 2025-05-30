@@ -16,67 +16,56 @@ class DocumentUISystem:
     def __init__(self, main_window):
         self.main_window = main_window
         self.table_widget = None
-        self.monitoring_ui = MonitoringUISystem(main_window)
+        # progress_bar를 main_window를 부모로 하여 초기화합니다.
         self.progress_bar = QProgressBar(main_window)
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
+        self.progress_bar.setRange(0, 100) #
+        self.progress_bar.setValue(0) #
 
-        self.messages_config = load_config("config/messages.json")
-        self.messages = self.messages_config["messages"]
+        self.messages_config = load_config("config/messages.json") #
+        self.messages = self.messages_config["messages"] #
 
-    def _execute_action(self, action, confirmation_key=None, success_key=None, error_key=None, **kwargs):
-        if confirmation_key:
-            reply = QMessageBox.question(
-                self.main_window, "확인",
-                get_message(self.messages, confirmation_key).format(**kwargs),
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+    def _execute_action(self, action, confirmation_key=None, success_key=None, error_key=None, **kwargs): #
+        if confirmation_key: #
+            reply = QMessageBox.question( #
+                self.main_window, "확인", #
+                get_message(self.messages, confirmation_key).format(**kwargs), #
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No #
             )
-            if reply == QMessageBox.No:
-                return
+            if reply == QMessageBox.No: #
+                return #
 
         try:
-            result = action() if callable(action) else None  # Execute the action and store the result
-            if success_key:
-                QMessageBox.information(self.main_window, "완료", get_message(self.messages, success_key).format(**kwargs))
-            return result # Return the result of the action
-        except Exception as e:
-            logging.error(f"Error: {e}")
-            if error_key:
-                QMessageBox.warning(self.main_window, "오류", get_message(self.messages, error_key))
+            result = action() if callable(action) else None #
+            if success_key: #
+                QMessageBox.information(self.main_window, "완료", get_message(self.messages, success_key).format(**kwargs)) #
+            return result #
+        except Exception as e: #
+            logging.error(f"Error: {e}") #
+            if error_key: #
+                QMessageBox.warning(self.main_window, "오류", get_message(self.messages, error_key)) #
 
-    def init_ui(self):
-        central_widget = QWidget(self.main_window)
-        self.main_window.setCentralWidget(central_widget)
-        central_widget.setLayout(QVBoxLayout())
+    def get_widget(self):
+        """문서 테이블과 관련 UI 요소(progress_bar 포함)를 포함하는 컨테이너 위젯을 생성하고 반환합니다."""
+        container_widget = QWidget()
+        layout = QVBoxLayout(container_widget)
 
-        splitter = QSplitter(central_widget)
-        central_widget.layout().addWidget(splitter)
+        # 문서 테이블 생성 및 설정
+        self.table_widget = QTableWidget()
+        self.table_widget.setColumnCount(len(self.messages["table_columns"])) #
+        self.table_widget.setHorizontalHeaderLabels(self.messages["table_columns"]) #
 
-        document_ui_widget = self.create_table_widget()
-        splitter.addWidget(document_ui_widget)
+        header = self.table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch) #
+        header.setStretchLastSection(True) #
 
-        monitoring_ui_widget = self.monitoring_ui
-        if isinstance(monitoring_ui_widget, QWidget):
-            if monitoring_ui_widget.layout() is None:
-                monitoring_layout = QVBoxLayout()
-                monitoring_ui_widget.setLayout(monitoring_layout)
-            else:
-                monitoring_layout = monitoring_ui_widget.layout()
-            monitoring_layout.addWidget(self.progress_bar)
-            
-            log_display = QTextEdit()
-            log_display.setReadOnly(True)
-            monitoring_layout.addWidget(log_display)
+        layout.addWidget(self.table_widget)
 
-            for widget_config in self.config["monitoring_ui"]["widgets"]:
-                widget = getattr(self.main_window, widget_config["name"])
-                monitoring_layout.addWidget(widget)
-
-        else:
-            logging.error("Monitoring UI is not a QWidget. Cannot add progress bar.")
-
-        splitter.setSizes([1000, 200])
-        logging.info("DocumentUISystem UI initialized.")
+        # ProgressBar를 테이블 아래에 추가
+        # 이미 __init__에서 초기화되었으므로 여기서는 레이아웃에 추가만 합니다.
+        layout.addWidget(self.progress_bar)
+        
+        container_widget.setLayout(layout) # QVBoxLayout이 container_widget에 설정되었으므로 이 줄은 사실상 불필요
+        return container_widget
 
     def create_table_widget(self):
         """문서 테이블 생성."""
