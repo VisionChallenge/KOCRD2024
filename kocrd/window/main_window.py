@@ -1,12 +1,12 @@
+# main_window.py
+
 import logging
-import os
-import json
 from PyQt5.QtWidgets import QMainWindow, QWidget, QSplitter, QVBoxLayout, QMessageBox, QProgressBar
 from PyQt5.QtCore import pyqtSignal
-from window.document_ui_system import DocumentUISystem
-from window.monitoring_ui_system import MonitoringUISystem
-from kocrd.window.menubar_manager import MenubarManager
-from kocrd.config.messages import messages
+from document_ui_system import DocumentUISystem
+from monitoring_ui_system import MonitoringUISystem
+from menubar_manager import MenubarManager
+from kocrd.config.config import text_manager, AppConfig # text_manager와 AppConfig import
 
 class MainWindow(QMainWindow):
     command_processed = pyqtSignal(str, str)  # (Command Text, AI Response) 신호
@@ -14,33 +14,50 @@ class MainWindow(QMainWindow):
     def __init__(self, system_manager, ocr_manager, event_manager):
         super().__init__()
         self.system_manager = system_manager
-        self.system_manager.main_window = self  # SystemManager에 MainWindow 인스턴스 설정
-        self.model_manager = self.system_manager.get_ai_model_manager()  # SystemManager를 통해 AIModelManager 접근
+        self.system_manager.main_window = self
+        self.model_manager = self.system_manager.get_ai_model_manager()
         self.ocr_manager = ocr_manager
         self.event_manager = event_manager
 
-        self.config = self.load_config()
-        self.setWindowTitle(self.messages["main_window"]["title"])
-        self.setGeometry(100, 100, self.messages["main_window"]["size"]["width"], self.messages["main_window"]["size"]["height"])
+        # TextManager는 config.py에서 전역 인스턴스로 이미 초기화되어 있으므로 직접 사용
+        self.text_manager = text_manager # 전역 인스턴스를 참조
+
+        # UI 설정은 AppConfig에서 가져옴 (ui.json의 기본값)
+        # 텍스트는 text_manager에서 가져옴
+        
+        # 창 제목 설정
+        self.setWindowTitle(self.text_manager.get_text("ui", "main_window", "title"))
+        
+        # 창 크기 설정 (AppConfig에서 가져옴)
+        main_window_size = AppConfig.UI_SETTINGS.get("main_window", {}).get("size", {})
+        width = main_window_size.get("width", 1200)
+        height = main_window_size.get("height", 800)
+        self.setGeometry(100, 100, width, height)
 
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
 
-        self.document_ui_system = DocumentUISystem(self)  # DocumentUISystem 인스턴스 생성
-        self.monitoring_ui_system = MonitoringUISystem(self)  # MonitoringUISystem 인스턴스 생성
-        self.menubar_manager = MenubarManager(system_manager)  # MenubarManager 인스턴스 생성
-        self.setMenuBar(self.menubar_manager.get_ui())  # Menubar UI 설정
+        self.document_ui_system = DocumentUISystem(self, system_manager, ocr_manager)
+        self.monitoring_ui_system = MonitoringUISystem(self, system_manager)
 
-        self.messages = messages["messages"]
-        self.error_messages = messages["error"]
+        self.menubar_manager = MenubarManager(self, system_manager)
+        self.setMenuBar(self.menubar_manager.create_menubar())
 
-        self.init_ui()
-        logging.info("MainWindow initialized.")
+        self.setup_ui()
+        logging.info(self.text_manager.get_text("log", "MSG_328")) # "Window configuration loaded successfully."
 
     def init_ui(self):
-        self.document_ui_system.init_ui()
-        self.monitoring_ui_system.init_ui()
+        main_splitter = QSplitter(Qt.Horizontal)
+        main_splitter.addWidget(self.document_ui_system.get_widget())
+        main_splitter.addWidget(self.monitoring_ui_system.get_widget())
+
+        self.setCentralWidget(main_splitter)
+
+    # 이전 load_config 함수는 이제 ConfigLoader.load_config를 사용하므로 필요 없습니다.
+    # def load_config(self):
+    #     print(messages["601"])
+    #     return messages
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
@@ -100,36 +117,23 @@ class MainWindow(QMainWindow):
         """사용자 메시지 처리."""
         try:
             if not message.strip():
-                logging.warning("Empty message received.")
+                logging.warning(self.text_manager.get_text("log", "MSG_EMPTY_MESSAGE"))
                 return
 
             response = self.monitoring_ui_system.generate_ai_response(message)
             self.monitoring_ui_system.display_chat_message(message, response)
 
         except Exception as e:
-            logging.error(self.get_error_message("05"))
-            self.monitoring_ui_system.display_chat_message(message, self.get_error_message("05"))
-
+            logging.error(self.text_manager.get_text("log", "MSG_CHAT_ERROR", error=e))
+            self.monitoring_ui_system.display_chat_message(message, self.text_manager.get_text("log", "MSG_CHAT_ERROR", error=e))
     def display_document_content(self, text, source="AI"):
         """문서 내용 표시."""
         try:
-            self.monitoring_ui_system.display_log(f"[{source}]:\n{text}\n")
-            logging.info(f"Displayed content from {source}.")
+            self.monitoring_ui_system.display_log(self.text_manager.get_text("log", "MSG_DISPLAY_CONTENT", source=source, text=text))
+            logging.info(self.text_manager.get_text("log", "MSG_DISPLAYED_CONTENT_INFO", source=source))
         except Exception as e:
-            logging.error(self.get_error_message("06").format(error=e))
+            logging.error(self.text_manager.get_text("log", "MSG_DISPLAY_CONTENT_ERROR", error=e))
 
-    def load_config(self):
-        """설정 파일을 로드하거나 기본 설정을 생성합니다."""
-        print(messages["601"])  # Window configuration loaded successfully.
-        return messages
-
-    def get_message(self, key):
-        """메시지 키를 통해 메시지를 가져옵니다."""
-        return self.messages.get(key, "메시지를 찾을 수 없습니다.")
-
-    def get_error_message(self, key):
-        """에러 메시지 키를 통해 에러 메시지를 가져옵니다."""
-        return self.error_messages.get(key, "에러 메시지를 찾을 수 없습니다.")
 
 # system_manager 모듈을 나중에 임포트
 from system import SystemManager
