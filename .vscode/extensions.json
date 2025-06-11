@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "ms-ceintl.vscode-language-pack-ko",
-        "ms-vscode.cmake-tools"
+        "visualstudioexptteam.intellicode-api-usage-examples",
+        "visualstudioexptteam.vscodeintellicode"
     ]
 }
