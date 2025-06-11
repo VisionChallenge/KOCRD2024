@@ -133,5 +133,77 @@
     "1050": "textExtractionError",
     "1051": "feedbackSaved",
     "1052": "feedbackSaveError"
-  }
-}
+    },
+    "ui": {
+      "main_window": {
+        "title": "KOCRD 2024",
+        "size": {
+          "width": 1200,
+          "height": 800
+        }
+      },
+    "elements": {
+      "menu_file": "파일",
+      "menu_settings": "설정",
+      "menu_help": "도움말",
+
+      "action_open": "열기",
+      "action_save": "저장",
+      "action_exit": "종료",
+      "action_configure": "환경설정",
+      "action_about": "정보",
+
+      "button_start_doc_processing": "문서 처리 시작",
+      "button_package_database": "데이터베이스 패키징",
+      "button_start_ai_training": "AI 모델 학습 시작",
+
+      "dialog_select_model_file_title": "모델 파일 선택",
+      "message_model_file_selected": "선택된 파일: {file_path}",
+      "message_no_file_selected": "선택된 파일 없음."
+    },
+    "structure": {
+      "menus": [
+        {
+          "display_key": "menu_file",
+          "actions": [
+            { "display_key": "action_open", "callback_id": "701" },
+            { "display_key": "action_save", "callback_id": "702" },
+            { "display_key": "action_exit", "callback_id": "703" }
+          ]
+        },
+        {
+          "display_key": "menu_settings",
+          "actions": [
+            { "display_key": "action_configure", "callback_id": "704" }
+          ]
+        },
+        {
+          "display_key": "menu_help",
+          "actions": [
+            { "display_key": "action_about", "callback_id": "705" }
+          ]
+        }
+      ],
+      "buttons": [
+        { "display_key": "button_start_doc_processing", "callback_id": "601" },
+        { "display_key": "button_package_database", "callback_id": "602" },
+        { "display_key": "button_start_ai_training", "callback_id": "603" }
+      ],
+        "monitoring": {
+          "widgets": [
+        { "display_key": "progress_bar_name", "type": "QProgressBar" },
+        { "display_key": "log_display_name", "type": "QTextEdit", "readonly": true },
+        { "display_key": "chat_output_name", "type": "QTextEdit", "readonly": true },
+        { "display_key": "chat_input_name", "type": "QLineEdit" },
+        { "display_key": "feedback_input_name", "type": "QTextEdit" }
+          ]
+      },
+        "table_columns": [
+        { "display_key": "column_file_name" },
+        { "display_key": "column_document_type" },
+        { "display_key": "column_creation_date" },
+        { "display_key": "column_modification_date"}
+        ]
+      }
+    }
+ }

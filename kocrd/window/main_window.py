@@ -1,8 +1,7 @@
 # main_window.py
-
 import logging
 from PyQt5.QtWidgets import QMainWindow, QWidget, QSplitter, QVBoxLayout, QMessageBox, QProgressBar
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
 from document_ui_system import DocumentUISystem
 from monitoring_ui_system import MonitoringUISystem
 from menubar_manager import MenubarManager

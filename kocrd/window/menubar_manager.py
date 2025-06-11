@@ -4,8 +4,7 @@ import json
 import logging
 from PyQt5.QtWidgets import QMenuBar, QAction, QMessageBox, QFileDialog, QApplication, QDialog
 
-from kocrd.config.config import load_config, get_message
-from kocrd.Settings.settings_manager import SettingsManager
+from kocrd.config.config import text_manager, AppConfig
 
 class MenubarManager:
     """메뉴바 이벤트 및 UI 관리 클래스."""
@@ -13,106 +12,145 @@ class MenubarManager:
         self.system_manager = system_manager
         self.menu_bar = QMenuBar(system_manager.parent)
         self.main_window = system_manager.parent
-        self.config_path = "config/ui.json"  # ui.json 파일 경로 변경
-        logging.info("MenubarManager initialized with main_window.")
+        
+        # text_manager와 AppConfig 인스턴스를 직접 참조
+        self.text_manager = text_manager
+        self.app_config = AppConfig
 
-        self.config = load_config(self.config_path)  # 설정 로드
-        self.messages_config = load_config("config/messages.json")  # messages.json 로드
-        self.id_mapping = self.messages_config["id_mapping"]  # ID 매핑 로드
+        logging.info("MenubarManager initialized with main_window.")
         self.setup_menus()
 
     def setup_menus(self):
         """메뉴 항목 설정."""
-        for menu_config in self.config["components"]["menus"]:  # components.menus에서 메뉴 정보 가져옴
-            menu = self.menu_bar.addMenu(menu_config["name"])
-            for action_config in menu_config["actions"]:
-                action = QAction(action_config["name"], self.main_window)
-                action.triggered.connect(getattr(self, f"callback_{self.id_mapping[action_config['callback']]}"))
-                menu.addAction(action)
-        logging.info("MenubarManager initialized.")
+        # 'ui.structure.menus' 경로를 통해 메뉴 구조를 가져옵니다.
+        # 'ui.elements' 경로를 통해 모든 UI 요소의 표시 텍스트를 가져옵니다.
+        ui_structure_menus = self.app_config.UI_SETTINGS.get("structure", {}).get("menus", [])
+        ui_elements_texts = self.app_config.UI_SETTINGS.get("elements", {})
 
+        for menu_config in ui_structure_menus:
+            # 메뉴 이름은 "display_key"를 통해 ui.elements에서 조회
+            menu_display_key = menu_config.get("display_key")
+            if not menu_display_key:
+                logging.error(f"Menu config missing 'display_key': {menu_config}")
+                continue
+            
+            menu_text = ui_elements_texts.get(menu_display_key, menu_display_key) # 기본값으로 키 자체 사용
+            menu = self.menu_bar.addMenu(menu_text)
+            
+            for action_config in menu_config["actions"]:
+                # 액션 이름도 "display_key"를 통해 ui.elements에서 조회
+                action_display_key = action_config.get("display_key")
+                if not action_display_key:
+                    logging.error(f"Action config missing 'display_key': {action_config}")
+                    continue
+
+                action_text = ui_elements_texts.get(action_display_key, action_display_key) # 기본값으로 키 자체 사용
+                action = QAction(action_text, self.main_window)
+                
+                callback_id = action_config.get("callback_id") # 'callback_id' 사용
+                if not callback_id:
+                    logging.error(f"Action config missing 'callback_id': {action_config}")
+                    continue
+
+                try:
+                    method_to_call = getattr(self, f"callback_{callback_id}")
+                    action.triggered.connect(method_to_call)
+                except AttributeError:
+                    logging.error(f"Callback method 'callback_{callback_id}' not found in MenubarManager.")
+                    continue 
+
+                menu.addAction(action)
+        logging.info("MenubarManager menus setup successfully.")
+
+    def create_menubar(self):
+        """MainWindow에서 호출하여 메뉴바 UI를 반환합니다."""
+        return self.menu_bar
+
+    # 각 콜백 메서드에서 text_manager.get_text 사용 (로그 메시지 및 UI 메시지 구분)
     def callback_701(self):
         """열기 콜백."""
-        print(get_message(self.messages_config, "701"))  # 열기
+        logging.info(self.text_manager.get_text("log", "FILE_OPEN_ACTION"))
         self.system_manager.open_file_dialog()
 
     def callback_702(self):
         """저장 콜백."""
-        print(get_message(self.messages_config, "702"))  # 저장
+        logging.info(self.text_manager.get_text("log", "FILE_SAVE_ACTION"))
         self.system_manager.save_file()
 
     def callback_703(self):
         """종료 콜백."""
-        print(get_message(self.messages_config, "703"))  # 종료
+        logging.info(self.text_manager.get_text("log", "APP_EXIT_ACTION"))
         self.main_window.close()
 
     def callback_704(self):
         """설정 열기 콜백."""
-        self.open_settings_dialog()
+        logging.info(self.text_manager.get_text("log", "SETTINGS_OPEN_ACTION"))
+        if hasattr(self.system_manager, 'settings_manager'):
+            self.system_manager.settings_manager.open_settings_dialog()
+        else:
+            logging.error(self.text_manager.get_text("general", "SETTINGS_MANAGER_NOT_FOUND_ERROR", default="Settings Manager not configured."))
+            QMessageBox.critical(self.main_window, 
+                                 self.text_manager.get_text("general", "ERROR_TITLE", default="Error"), 
+                                 self.text_manager.get_text("general", "SETTINGS_MANAGER_NOT_FOUND_ERROR", default="Settings Manager not configured."))
 
     def callback_705(self):
         """정보 콜백."""
+        logging.info(self.text_manager.get_text("log", "ABOUT_DIALOG_ACTION"))
         self.show_about_dialog()
 
     def open_deep_learning_dialog(self):
         """딥러닝 학습 경로를 선택하도록 대화창을 엽니다."""
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
+
+        # ui.elements에서 UI 텍스트 가져오기
+        ui_elements_texts = self.app_config.UI_SETTINGS.get("elements", {})
+
+        dialog_title = ui_elements_texts.get("dialog_select_model_file_title", "Select Model File")
+        info_message_success = ui_elements_texts.get("message_model_file_selected", "Selected file: {file_path}")
+        info_message_warning = ui_elements_texts.get("message_no_file_selected", "No file selected.")
+        model_file_filter = self.text_manager.get_text("general", "MODEL_FILE_FILTER_TEXT", default="Model Parameters (*.traineddata);;All Files (*)")
+
         file_path, _ = QFileDialog.getOpenFileName(
             self.main_window,
-            self.get_message("12"),
+            dialog_title,
             "",
-            "Model Parameters (*.traineddata);;All Files (*)",
+            model_file_filter,
             options=options
         )
         if file_path:
+            logging.info(self.text_manager.get_text("log", "DL_FILE_SELECTED_LOG").format(file_path=file_path))
             QMessageBox.information(
                 self.main_window,
-                self.get_message("12"),
-                self.get_message("14").format(file_path=file_path)
+                dialog_title,
+                info_message_success.format(file_path=file_path)
             )
-            self.system_manager.ai_manager.train_with_parameters(file_path)  # 학습 시작
+            if hasattr(self.system_manager, 'ai_model_manager') and hasattr(self.system_manager.ai_model_manager, 'train_with_parameters'):
+                 self.system_manager.ai_model_manager.train_with_parameters(file_path)
+            else:
+                 logging.error(self.text_manager.get_text("general", "AI_MANAGER_NOT_FOUND_ERROR", default="AI Manager not properly configured."))
+                 QMessageBox.critical(self.main_window, self.text_manager.get_text("general", "ERROR_TITLE", default="Error"), 
+                                      self.text_manager.get_text("general", "AI_MANAGER_NOT_FOUND_ERROR", default="AI Manager not properly configured."))
         else:
+            logging.info(self.text_manager.get_text("log", "DL_NO_FILE_SELECTED_LOG"))
             QMessageBox.warning(
                 self.main_window,
-                self.get_message("12"),
-                self.get_message("15")
+                dialog_title,
+                info_message_warning
             )
 
-    def open_settings_dialog(self):
-        """환경설정 대화창 열기."""
-        dialog = SettingsDialogUI(self.system_manager.settings_manager, self.main_window)
-        dialog.exec_()
+    def show_about_dialog(self):
+        """정보 대화창을 표시합니다."""
+        app_name = self.text_manager.get_text("general", "APP_NAME", default="KOCRD")
+        app_version = self.text_manager.get_text("general", "APP_VERSION", default="1.0")
+        app_author = self.text_manager.get_text("general", "APP_AUTHOR", default="Unknown")
+        about_text = f"{app_name}\n{app_version}\n{app_author}"
 
-    def load_config(self):
-        """설정 파일을 로드하거나 기본 설정을 생성합니다."""
-        config_path = self.config_path
-        try:
-            with open(config_path, "r", encoding="utf-8") as file:
-                return json.load(file)
-        except FileNotFoundError:
-            logging.error(f"Config file not found: {config_path}")
-            return {}  # 빈 설정 반환
-        except json.JSONDecodeError as e:
-            logging.error(f"Error decoding config file: {e}")
-            return {}  # 빈 설정 반환
-
-    def load_id_mapping(self):
-        """ID 매핑 파일을 로드합니다."""
-        id_mapping_path = "config/messages.json"
-        try:
-            with open(id_mapping_path, "r", encoding="utf-8") as file:
-                return json.load(file)["id_mapping"]
-        except FileNotFoundError:
-            logging.error(f"ID mapping file not found: {id_mapping_path}")
-            return {}  # 빈 매핑 반환
-        except json.JSONDecodeError as e:
-            logging.error(f"Error decoding ID mapping file: {e}")
-            return {}  # 빈 매핑 반환
-
-    def get_message(self, key):
-        """메시지 키를 통해 메시지를 가져옵니다."""
-        return get_message(self.messages_config, key)
+        QMessageBox.about(
+            self.main_window,
+            self.text_manager.get_text("general", "ABOUT_TITLE", default="About"),
+            about_text
+        )
 
     def get_ui(self):
         """MenuBar UI 반환."""
