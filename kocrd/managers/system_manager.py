@@ -1,252 +1,198 @@
-# system_manager.py
+# file_name: system_manager.py
 import logging
 import json
 import sys
 import os
-import time
-import threading
-import uuid
 import pika
 import pytesseract
 from typing import Dict, Any, Optional
 from PyQt5.QtWidgets import QMessageBox, QApplication
 
-
-from managers.ocr.ocr_manager import OCRManager
-from managers.temp_file_manager import TempFileManager
-from managers.monitoring_manager import MonitoringManager
-from managers.database_manager import DatabaseManager
-from managers.menubar_manager import MenubarManager
-from managers.document.document_manager import DocumentManager
-from managers.ai_managers.AI_model_manager import AIModelManager
-from managers.ai_managers.ai_prediction_manager import AIPredictionManager
-from managers.ai_managers.AI_data_manager import AIDataManager
-from managers.rabbitmq_manager import RabbitMQManager
-from managers.settings_manager import SettingsManager
-from managers.ai_managers.ai_training_manager import AITrainingManager
-from managers.analysis_manager import AnalysisManager
-from managers.ai_managers.ai_event_manager import AIEventManager
-from managers.ai_managers.ai_ocr_running import AIOCRRunning
-from managers.ai_managers.ai_event_manager import AIEventManager
-
-from utils.embedding_utils import generate_document_type_embeddings
-
-# UI 임포트
-from ui.menubar_ui import MenubarUI
-from ui.document_ui import DocumentUI
-from ui.monitoring_ui import MonitoringUI
-
-# config/development.py 임포트
-try:
-    from config import development
-except ImportError as e:
-    logging.error(f"config.development 임포트 오류: {e}")
-    sys.exit(1)
+from kocrd.config.config import load_config, load_language_pack, get_message, handle_error, send_message_to_queue
+from kocrd.managers.ocr.ocr_manager import OCRManager
+from kocrd.managers.temp_file_manager import TempFileManager
+from kocrd.managers.database_manager import DatabaseManager
+from kocrd.window.menubar_manager import MenubarManager
+from kocrd.managers.document.document_manager import DocumentManager
+from kocrd.Settings.settings_manager import SettingsManager
+from kocrd.utils.embedding_utils import generate_document_type_embeddings, run_embedding_generation, EmbeddingUtils
+from kocrd.managers.ai_managers.ai_model_manager import AIModelManager
 
 class SystemManager:
-    def __init__(self, settings_manager, main_window, tesseract_cmd, tessdata_dir):
+    def __init__(self, settings_manager: SettingsManager, main_window=None, tesseract_cmd=None, tessdata_dir=None):
         self.settings_manager = settings_manager
-        self.main_window = main_window
+        self.main_window = main_window  # MainWindow 인스턴스 설정
         self.tesseract_cmd = tesseract_cmd
         self.tessdata_dir = tessdata_dir
-        self.rabbitmq_manager = RabbitMQManager()
         self.managers = {}
         self.uis = {}
-        self.settings = self.settings_manager.config # 변수명 변경: self.config -> self.settings
-        self.init_components(self.settings) # 변수명 변경
+        self.settings = self.load_development_settings()
+        self._init_components(self.settings)
+        self.initialize_managers()
+        self.rabbitmq_connection = None
+        self.rabbitmq_channel = None
+        self._configure_rabbitmq()
 
-        # Tesseract 설정
+    @staticmethod
+    def initialize_settings(settings_path="config/development.json"):
+        config_path = os.path.join(os.path.dirname(__file__), settings_path)
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            if "constants" not in config:
+                raise KeyError("Missing 'constants' in configuration file.")
+        except FileNotFoundError:
+            logging.critical(f"Configuration file not found: {config_path}")
+            raise
+        except json.JSONDecodeError as e:
+            logging.critical(f"Error decoding JSON from configuration file: {e}")
+            raise
+        except KeyError as e:
+            logging.critical(f"Configuration error: {e}")
+            raise
+        except Exception as e:
+            logging.critical(f"Unexpected error loading configuration file: {e}")
+            raise
+
+        settings_manager = SettingsManager(config_path)
+        settings_manager.load_from_env()
+        return settings_manager, config
+
+    def load_development_settings(self):
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'development.json')
+        with open(config_path, 'r') as f:
+            return json.load(f)
+
+    def initialize_managers(self):
+        config = self.settings
+        for manager_name, manager_config in config["managers"].items():
+            manager_class = self.get_class(manager_config["module"], manager_config["class"])
+            kwargs = manager_config.get("kwargs", {})
+            dependencies = [self.managers[dep] for dep in manager_config.get("dependencies", [])]
+            manager_instance = manager_class(*dependencies, **kwargs)
+            self.managers[manager_name] = manager_instance
+
+        self.managers["temp_file"] = self.create_temp_file_manager()
+        self.managers["database"] = self.create_database_manager()
+        self.managers["analysis"] = self.create_analysis_manager()
+        self.managers["menubar"] = self.create_menubar_manager()
+        self.managers["document"] = self.create_document_manager()
+        self.managers["ocr"] = self.create_ocr_manager()
+        self._configure_tesseract()
+
+    def create_temp_file_manager(self):
+        return TempFileManager(self.settings_manager)
+
+    def create_database_manager(self):
+        return DatabaseManager(self.settings_manager.get_setting("db_path"), self.settings_manager.get_setting("backup_path"))
+
+    def get_temp_file_manager(self):
+        return self.managers.get("temp_file")
+
+    def get_database_manager(self):
+        return self.managers.get("database")
+
+    def create_menubar_manager(self):
+        return MenubarManager(self.main_window)
+
+    def create_document_manager(self):
+        return DocumentManager(self.settings_manager)
+
+    def create_ocr_manager(self):
+        return OCRManager(self.settings_manager)
+
+    def _configure_tesseract(self):
         pytesseract.pytesseract.tesseract_cmd = self.tesseract_cmd
         if self.tessdata_dir:
             pytesseract.pytesseract.tessdata_dir = self.tessdata_dir
             logging.info(f"🟢 Tessdata 설정 완료: {self.tessdata_dir}")
-
         logging.info(f"🟢 Tesseract 설정 완료: {self.tesseract_cmd}")
         logging.info("🟢 SystemManager 초기화 완료.")
 
+    def _configure_rabbitmq(self):
+        rabbitmq_settings = self.settings["managers"]["message_queue"]["kwargs"]
+        credentials = pika.PlainCredentials(rabbitmq_settings["username"], rabbitmq_settings["password"])
+        parameters = pika.ConnectionParameters(rabbitmq_settings["host"], rabbitmq_settings["port"], '/', credentials)
+        self.rabbitmq_connection = pika.BlockingConnection(parameters)
+        self.rabbitmq_channel = self.rabbitmq_connection.channel()
+        logging.info("🟢 RabbitMQ 설정 완료.")
 
     def _init_components(self, settings: Dict[str, Any]) -> None:
         """설정 파일을 기반으로 매니저 및 UI 초기화"""
-        components = {"managers": self.managers, "uis": self.uis}
-
-        for component_type, component_dict in components.items():
-            for component_name, component_settings in settings.get(component_type, {}).items():
+        for component_type, component_dict in settings.items():
+            for component_name, component_settings in component_dict.items():
                 try:
-                    class_name = component_settings["class"]
-                    dependencies = {dep: self.managers.get(dep) for dep in component_settings.get("dependencies", [])}
+                    class_ = self.get_class(component_settings["module"], component_settings["class"])
+                    dependencies = [self.managers[dep] for dep in component_settings.get("dependencies", [])]
                     kwargs = component_settings.get("kwargs", {})
-
-                    # 필수 의존성 주입
-                    if component_settings.get("inject_settings", False):
-                        kwargs["settings_manager"] = self.settings_manager
-                    if component_settings.get("inject_main_window", False):
-                        kwargs["main_window"] = self.main_window
-                    if component_settings.get("inject_system_manager", False):
-                        kwargs["system_manager"] = self
-
-                    # 클래스 동적 로드
-                    module_name = component_settings.get("module") # module 정보 가져오기
-                    if module_name: # module 정보가 있는 경우에만 동적 import
-                        try:
-                            module = __import__(module_name, fromlist=[class_name])
-                        except ModuleNotFoundError as e:
-                            logging.error(f"모듈 {module_name}를 찾을 수 없습니다: {e}")
-                            sys.exit(1)
-                    else: # module 정보가 없는 경우 managers에서 찾도록 수정
-                        module_name = f"managers.{component_name}"
-                        module = __import__(module_name, fromlist=[class_name])
-                    
-                    class_ = getattr(module, class_name)
-                    component_dict[component_name] = class_(**dependencies, **kwargs)
-
+                    component_dict[component_name] = class_(*dependencies, **kwargs)
                     logging.info(f"🟢 {component_type.capitalize()} '{component_name}' 초기화 완료.")
                 except Exception as e:
-                    logging.error(f" {component_type.capitalize()} '{component_name}' 초기화 실패: {e}")
+                    logging.error(f"🔴 {component_type.capitalize()} '{component_name}' 초기화 실패: {e}")
                     sys.exit(1)
 
     def database_packaging(self):
-        self.get_manager("database").package_database() # get_manager 사용
+        self.get_manager("database").package_database()  # get_manager 사용
+
     def trigger_process(self, process_type: str, data: Optional[Dict[str, Any]] = None):
         """AI 모델 실행 프로세스 트리거"""
-        manager = self.get_manager("document")
-        if process_type == "document_processing":
-            manager.request_document_processing(data)
-        elif process_type == "database_packaging":
-            self.get_manager("database").request_database_packaging()
-        elif process_type == "ai_training":
-            manager.request_ai_training(data)
+        if process_type == "database_packaging":
+            self.get_temp_file_manager().database_packaging()
         else:
-            logging.warning(f"🔴 알 수 없는 프로세스 유형: {process_type}")
-            QMessageBox.warning(self.main_window, "오류", "알 수 없는 작업 유형입니다.")
+            manager = self.get_manager("document")
+            if process_type == "document_processing":
+                manager.request_document_processing(data)
+            elif process_type == "database_packaging":
+                self.get_database_manager().request_database_packaging()
+            elif process_type == "ai_training":
+                self.get_manager("ai_training").request_ai_training(data)
+            elif process_type == "generate_text":
+                ai_manager = self.get_ai_manager()
+                if (ai_manager):
+                    return ai_manager.generate_text(data.get("command", ""))
+                else:
+                    logging.error("AIManager가 초기화되지 않았습니다.")
+            else:
+                logging.warning(f"🔴 알 수 없는 프로세스 유형: {process_type}")
+                QMessageBox.warning(self.main_window, "오류", "알 수 없는 작업 유형입니다.")
 
-    def handle_command(self, command_text: str):
-        """사용자 명령어 처리"""
-        monitoring_manager = self.get_manager("monitoring")
-        response = monitoring_manager.generate_ai_response(command_text)
-        monitoring_manager.monitoring_ui.display_chat_response("Command", response)
-        monitoring_manager.command_processed.emit(command_text, response)
-
-    def train_ai_model(self, training_data):
-        if not training_data or not isinstance(training_data, dict):
-            self.handle_error("유효하지 않은 학습 데이터를 제공했습니다.", error_code="AI_TRAIN_ERR_001")
-            return
-        try:
-            self.get_ai_manager().train_model(training_data)
-            logging.info("AI model training completed.")
-        except Exception as e:
-            self.handle_error(f"Error during AI model training: {e}", error_code="AI_TRAIN_ERR_002")
+    def handle_message(self, ch, method, properties, body):
+        """RabbitMQ 메시지를 처리합니다."""
+        # 메시지 처리 로직을 여기에 추가합니다.
+        logging.info(f"Received message: {body}")
 
     def handle_error(self, message, error_code=None):
         if error_code:
             logging.error(f"{message} (Error Code: {error_code})")
         else:
             logging.error(message)
-        QMessageBox.critical(self.parent, "Error", message)
+        QMessageBox.critical(self.main_window, "Error", message)
 
-    def start_consuming(self):
-        """RabbitMQ 메시지 소비 시작"""
-        def consume_messages():
-            queues_to_consume = {
-                self.settings_manager.get_queue_name("document_processing"): self.get_manager("document").handle_message,
-                self.settings_manager.get_queue_name("database_packaging"): self.get_manager("database").handle_message,
-                self.settings_manager.get_queue_name("temp_file_queue"): self.get_manager("temp_file").handle_message,
-                self.settings_manager.get_queue_name("ai_training_queue"): self.get_manager("ai_trainer").handle_message,
-            }
-
-            while True:
-                try:
-                    if not self.rabbitmq_manager.channel or self.rabbitmq_manager.channel.is_closed:
-                        self.rabbitmq_manager.connect_to_rabbitmq()
-                    channel = self.rabbitmq_manager.channel
-
-                    for queue, callback in queues_to_consume.items():
-                        channel.basic_consume(queue=queue, on_message_callback=callback, auto_ack=False)
-
-                    logging.info("📩 메시지 대기 중... (종료: CTRL+C)")
-                    channel.start_consuming()
-
-                except Exception as e:
-                    logging.error(f"🔴 RabbitMQ 소비 오류: {e}")
-                    time.sleep(5)
-
-        thread = threading.Thread(target=consume_messages, daemon=True)
-        thread.start()
-
-    def send_temp_file_message(self, message_type, file_path=None, file_paths=None, callback=None):
-        max_retries = 3
-        retry_delay = 1
-
-        for attempt in range(max_retries):
-            try:
-                connection = self.rabbitmq_manager.connection
-                if connection is None or connection.is_closed:
-                    self.rabbitmq_manager.connect_to_rabbitmq()
-                    connection = self.rabbitmq_manager.connection
-                channel = connection.channel()
-
-                message = {"type": message_type}
-                if file_path:
-                    message["file_path"] = file_path
-                if file_paths:
-                    message["file_paths"] = file_paths
-
-                if callback:
-                    callback_queue = str(uuid.uuid4())
-                    channel.queue_declare(queue=callback_queue, exclusive=True)
-                    channel.basic_consume(queue=callback_queue, on_message_callback=callback, auto_ack=True)
-                    channel.basic_publish(
-                        exchange='',
-                        routing_key=self.settings_manager.get_queue_name("temp_file_queue"),  # 큐 이름을 settings_manager에서 가져옴
-                        properties=pika.BasicProperties(reply_to=callback_queue),
-                        body=json.dumps(message).encode()
-                    )
-                else:
-                    channel.basic_publish(exchange='', routing_key=development.RABBITMQ_QUEUES["temp_file_queue"], body=json.dumps(message).encode()) # 큐 이름 변경
-                return
-
-            except pika.exceptions.AMQPConnectionError as e:
-                logging.error(f"RabbitMQ 연결 오류 (시도 {attempt+1}/{max_retries}): {e}")
-                QApplication.instance().invoke(lambda: QMessageBox.critical(self.main_window, "RabbitMQ 연결 오류", str(e)))
-                time.sleep(retry_delay * (2**attempt))
-                continue
-            except pika.exceptions.AMQPChannelError as e:
-                logging.error(f"RabbitMQ 채널 오류 (시도 {attempt+1}/{max_retries}): {e}")
-                QApplication.instance().invoke(lambda: QMessageBox.critical(self.main_window, "RabbitMQ 채널 오류", str(e)))
-                time.sleep(retry_delay)
-                self.rabbitmq_manager.connect_to_rabbitmq()
-                continue
-            except pika.exceptions.AMQPError as e:
-                logging.error(f"기타 RabbitMQ 오류 (시도 {attempt+1}/{max_retries}): {e}")
-                QApplication.instance().invoke(lambda: QMessageBox.critical(self.main_window, "RabbitMQ 오류", str(e)))
-                break
-            except Exception as e:
-                logging.error(f"메시지 전송 중 일반 오류 (시도 {attempt+1}/{max_retries}): {e}")
-                QApplication.instance().invoke(lambda: QMessageBox.critical(self.main_window, "오류", f"메시지 전송 중 일반 오류: {e}"))
-                break
-
-        logging.error(f"메시지 전송 실패 (최대 {max_retries}회 시도): {message_type}")
-        QApplication.instance().invoke(lambda: QMessageBox.critical(self.main_window, "오류", f"메시지 전송에 실패했습니다: {message_type}"))
     def run_embedding_generation(self):
-        try:
-            settings_manager = self.managers["settings_manager"]
-            generate_document_type_embeddings(settings_manager)
-            logging.info("임베딩 생성 작업 완료.")
-        except KeyError:
-            logging.error("SettingsManager가 초기화되지 않았습니다. config 파일을 확인해주세요.")
-        except Exception as e:
-            logging.exception(f"임베딩 생성 작업 중 오류 발생: {e}")
+        EmbeddingUtils.run_embedding_generation(self.settings_manager)
 
     def close_rabbitmq_connection(self):
-        self.rabbitmq_manager.close_connection()
+        if self.rabbitmq_connection:
+            self.rabbitmq_connection.close()
+            logging.info("🟢 RabbitMQ 연결 종료.")
+
     def get_ai_manager(self):
         return self.managers.get("ai_prediction")
+
     def get_manager(self, manager_name: str) -> Optional[Any]:
         return self.managers.get(manager_name)
 
     def get_ui(self, ui_name: str) -> Optional[Any]:
         return self.uis.get(ui_name)
 
-    def cleanup_temp_dir(self):
-        if self.get_manager("temp_file"):
-            self.get_manager("temp_file").cleanup_temp_dir()
-            logging.info("Temporary directory cleaned through SystemManager.")
+    def get_ai_model_manager(self):
+        """AIModelManager 인스턴스 반환."""
+        return self.managers.get("ai_model")
+
+    def get_class(self, module_name: str, class_name: str):
+        """모듈에서 클래스를 동적으로 가져옵니다."""
+        module = __import__(module_name, fromlist=[class_name])
+        return getattr(module, class_name)
+
+# main_window 모듈을 나중에 임포트
+from kocrd.window.main_window import MainWindow
